@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { CATEGORIES, PERLAP_STATUS_OPTIONS } from '../../data/initialData';
+import { CATEGORIES } from '../../data/initialData';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
@@ -41,9 +41,9 @@ export default function ItemFormCard({
         )}
       </div>
 
-      {/* Baris 1: Nama Barang, Jumlah, Kategori, Status di Divisi Perlap */}
+      {/* Baris 1: Nama Barang, Jumlah, Kategori */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-        <div className="sm:col-span-4">
+        <div className="sm:col-span-6">
           <Input
             id={`namaBarang-${draftId}`}
             label="Nama Barang / Alat"
@@ -68,27 +68,14 @@ export default function ItemFormCard({
           />
         </div>
 
-        <div className="sm:col-span-3">
+        <div className="sm:col-span-4">
           <Select
             id={`kategori-${draftId}`}
-            label="Kategori Pengadaan"
+            label="Kategori / Metode Pengadaan"
             required
             value={row.kategori}
             options={CATEGORIES}
             onChange={(e) => onChangeField(draftId, 'kategori', e.target.value)}
-          />
-        </div>
-
-        <div className="sm:col-span-3">
-          <Select
-            id={`tersediaDiPerlap-${draftId}`}
-            label="Sudah Ada di Divisi Perlap?"
-            required
-            value={row.tersediaDiPerlap || 'Belum Ada'}
-            options={PERLAP_STATUS_OPTIONS}
-            onChange={(e) =>
-              onChangeField(draftId, 'tersediaDiPerlap', e.target.value)
-            }
           />
         </div>
       </div>

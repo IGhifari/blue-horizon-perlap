@@ -46,8 +46,8 @@ export const KETENTUAN_ITEMS = [
     desc: 'Tuliskan nama orang/pihak yang akan meminjamkan barang tersebut.',
   },
   {
-    number: '6. Ketersediaan di Divisi Perlap:',
-    desc: 'Pilih apakah barang sudah ada di stok Divisi Perlengkapan atau belum ada.',
+    number: '6. Catatan Ketersediaan:',
+    desc: 'Jika barang sudah tersedia dari divisi masing-masing, tetap cantumkan & beri keterangan.',
   },
 ];
 
