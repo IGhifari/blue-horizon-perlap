@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistem Pendataan & Peminjaman Barang Divisi Perlengkapan</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .fade-in {
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Top Header -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-lg shadow-sm">
+          P
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight">Portal Logistik &amp; Peminjaman Barang Acara</h1>
+          <p class="text-xs text-slate-400">Sistem Terpadu Divisi Perlengkapan • 21 Okt – 15 Nov</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center gap-1.5 bg-slate-800/90 p-1 rounded-xl self-start sm:self-auto">
+        <button id="navFormBtn" type="button" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition bg-blue-600 text-white shadow-sm">
+          + Form Pengajuan
+        </button>
+        <button id="navRekapBtn" type="button" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/60 flex items-center gap-1.5">
+          <span>Rekap Per Divisi</span>
+          <span id="navCountBadge" class="px-1.5 py-0.5 text-[11px] rounded-full bg-slate-700 text-slate-200 font-semibold">5</span>
+        </button>
+        <button id="navTimelineBtn" type="button" class="px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/60">
+          Timeline Kerja
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+
+    <!-- ==================== VIEW 1: FORM PENGAJUAN BARANG ==================== -->
+    <section id="viewForm" class="fade-in space-y-6">
+      <!-- Ketentuan Banner -->
+      <div class="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 sm:p-5">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-blue-950 flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Ketentuan Pendataan Barang dan Peralatan
+            </h2>
+            <p class="text-xs sm:text-sm text-blue-900/80 mt-1">
+              Mohon setiap divisi mengisi daftar barang atau alat yang dibutuhkan. Anda dapat menambahkan <strong>Barang 1, Barang 2, dan seterusnya</strong> sekaligus dalam satu kali pengajuan.
+            </p>
+          </div>
+          <button id="toggleKetentuanBtn" type="button" class="text-xs font-semibold text-blue-700 hover:text-blue-900 underline shrink-0">
+            Sembunyikan Detail
+          </button>
+        </div>
+
+        <div id="ketentuanList" class="mt-3 pt-3 border-t border-blue-200/70 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs text-blue-950">
+          <div class="bg-white/80 rounded-xl p-2.5 border border-blue-100">
+            <span class="font-semibold text-blue-700">1. Nama &amp; Jumlah Barang:</span> Tuliskan nama alat beserta jumlah unit yang dibutuhkan.
+          </div>
+          <div class="bg-white/80 rounded-xl p-2.5 border border-blue-100">
+            <span class="font-semibold text-blue-700">2. Metode Pengadaan:</span> Pilih apakah barang akan <em>Dipinjam</em>, <em>Dibeli</em>, <em>Disewa</em>, atau <em>Sudah Tersedia</em>.
+          </div>
+          <div class="bg-white/80 rounded-xl p-2.5 border border-blue-100">
+            <span class="font-semibold text-blue-700">3. Jika Membeli:</span> Cantumkan perkiraan rentang harga barang.
+          </div>
+          <div class="bg-white/80 rounded-xl p-2.5 border border-blue-100">
+            <span class="font-semibold text-blue-700">4. Jika Menyewa:</span> Cantumkan nama atau informasi tempat sewanya jika sudah ada.
+          </div>
+          <div class="bg-white/80 rounded-xl p-2.5 border border-blue-100">
+            <span class="font-semibold text-blue-700">5. Jika Meminjam:</span> Tuliskan nama orang/pihak yang akan meminjamkan barang tersebut.
+          </div>
+          <div class="bg-white/80 rounded-xl p-2.5 border border-blue-100">
+            <span class="font-semibold text-blue-700">6. Catatan Ketersediaan:</span> Jika barang sudah tersedia dari divisi masing-masing, tetap cantumkan &amp; beri keterangan.
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Card -->
+      <form id="permintaanForm" class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <!-- Header Divisi & Tanggal -->
+        <div class="p-5 sm:p-6 bg-slate-50 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="selectDivisi" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+              Divisi Pemohon <span class="text-rose-600">*</span>
+            </label>
+            <select id="selectDivisi" required class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="Perlengkapan">Perlengkapan</option>
+              <option value="Humreg">Humreg</option>
+              <option value="Dekdok">Dekdok</option>
+              <option value="Acara" selected>Acara</option>
+              <option value="Keamanan">Keamanan</option>
+            </select>
+          </div>
+          <div>
+            <label for="inputTanggal" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+              Tanggal Permintaan <span class="text-rose-600">*</span>
+            </label>
+            <input id="inputTanggal" type="date" required value="2026-10-26" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+          </div>
+        </div>
+
+        <!-- Dynamic Item Cards Container (Barang 1, Barang 2, dst.) -->
+        <div class="p-5 sm:p-6 space-y-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm sm:text-base font-bold text-slate-900">Daftar Barang yang Diajukan</h3>
+              <p class="text-xs text-slate-500">Klik tombol "+ Tambah Barang Lain" di bawah jika ingin mengajukan lebih dari 1 barang sekaligus.</p>
+            </div>
+            <span id="itemDraftCountBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              1 Barang
+            </span>
+          </div>
+
+          <div id="itemsContainer" class="space-y-4"></div>
+
+          <!-- Add More Item Button -->
+          <div class="pt-2">
+            <button id="addMoreItemBtn" type="button" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/50 hover:bg-blue-50 text-blue-700 font-semibold text-xs sm:text-sm transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Tambah Barang Lain (Barang 2, dst.)
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit Footer -->
+        <div class="px-5 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p class="text-xs text-slate-500">
+            Data otomatis masuk ke <strong>Form Responses</strong> dan langsung terpisah ke <strong>Sheet Divisi</strong> masing-masing.
+          </p>
+          <div class="flex items-center gap-2.5">
+            <button id="resetFormBtn" type="button" class="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-xs sm:text-sm font-medium text-slate-700 transition">
+              Reset Form
+            </button>
+            <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition">
+              Kirim Permintaan Barang
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- ==================== VIEW 2: REKAP PER DIVISI & FORM RESPONSES ==================== -->
+    <section id="viewRekap" class="hidden fade-in space-y-6">
+      <!-- Summary KPI Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <p class="text-xs font-medium text-slate-500">Total Jenis Barang</p>
+          <p id="kpiTotalJenis" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+          <p id="kpiActiveScope" class="text-[11px] text-blue-600 font-medium mt-1">Semua Divisi</p>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <p class="text-xs font-medium text-slate-500">Total Jumlah Unit</p>
+          <p id="kpiTotalUnit" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+          <p class="text-[11px] text-slate-400 mt-1">Akumulasi unit dibutuhkan</p>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <p class="text-xs font-medium text-slate-500">Pinjam &amp; Sewa</p>
+          <p id="kpiPinjamSewa" class="text-2xl font-bold text-amber-600 mt-1">0</p>
+          <p class="text-[11px] text-slate-400 mt-1">Perlu koordinasi vendor/peminjam</p>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <p class="text-xs font-medium text-slate-500">Beli &amp; Tersedia di Divisi</p>
+          <p id="kpiBeliSedia" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+          <p class="text-[11px] text-slate-400 mt-1">Pengadaan beli &amp; stok internal</p>
+        </div>
+      </div>
+
+      <!-- Division Sheet Tabs & Actions -->
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <!-- Sheet Selector Pills -->
+          <div id="sheetFilterTabs" class="flex flex-wrap items-center gap-1.5">
+            <button type="button" data-divisi="ALL" class="sheet-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white">
+              Semua (Form Responses)
+            </button>
+            <button type="button" data-divisi="Perlengkapan" class="sheet-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
+              Rekap - Perlengkapan
+            </button>
+            <button type="button" data-divisi="Humreg" class="sheet-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
+              Rekap - Humreg
+            </button>
+            <button type="button" data-divisi="Dekdok" class="sheet-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
+              Rekap - Dekdok
+            </button>
+            <button type="button" data-divisi="Acara" class="sheet-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
+              Rekap - Acara
+            </button>
+            <button type="button" data-divisi="Keamanan" class="sheet-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
+              Rekap - Keamanan
+            </button>
+          </div>
+
+          <!-- Export & Add Quick Buttons -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="exportCsvBtn" type="button" class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5 transition">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Unduh CSV / Excel
+            </button>
+            <button id="copyTableBtn" type="button" class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5 transition">
+              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              Salin ke Spreadsheet
+            </button>
+          </div>
+        </div>
+
+        <!-- Search & Category Filter Bar -->
+        <div class="px-4 sm:px-5 py-3 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="relative flex-1 max-w-md">
+            <input id="searchBarangInput" type="text" placeholder="Cari nama barang, tempat sewa, peminjam, atau catatan..." class="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="filterKategoriSelect" class="text-xs font-medium text-slate-600">Kategori:</label>
+            <select id="filterKategoriSelect" class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="ALL">Semua Kategori</option>
+              <option value="Pinjam">Pinjam</option>
+              <option value="Beli">Beli</option>
+              <option value="Sewa">Sewa</option>
+              <option value="Sudah Tersedia di Divisi">Sudah Tersedia di Divisi</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 9-Column Table matching User's Requested Order -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-900 text-white text-[11px] uppercase tracking-wider">
+                <th class="py-3 px-3.5 font-semibold">Divisi</th>
+                <th class="py-3 px-3.5 font-semibold">Nama Barang</th>
+                <th class="py-3 px-3.5 font-semibold text-right">Jumlah Barang</th>
+                <th class="py-3 px-3.5 font-semibold text-center">Kategori</th>
+                <th class="py-3 px-3.5 font-semibold">Jika Membeli</th>
+                <th class="py-3 px-3.5 font-semibold">Jika Menyewa</th>
+                <th class="py-3 px-3.5 font-semibold">Jika Meminjam</th>
+                <th class="py-3 px-3.5 font-semibold">Catatan Opsional</th>
+                <th class="py-3 px-3.5 font-semibold text-center">Tanggal Permintaan</th>
+                <th class="py-3 px-3.5 font-semibold text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="rekapTableBody" class="divide-y divide-slate-200 text-xs sm:text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: TIMELINE KERJA PERLENGKAPAN ==================== -->
+    <section id="viewTimeline" class="hidden fade-in space-y-6">
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900">Timeline &amp; Target Kerja Divisi Perlengkapan (21 Okt – 15 Nov)</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Klik status atau geser progres pada setiap tahapan kerja untuk memperbarui capaian tim Perlengkapan.</p>
+        </div>
+        <div class="flex items-center gap-3 bg-blue-50 border border-blue-200 px-4 py-2.5 rounded-xl">
+          <div>
+            <p class="text-[11px] font-semibold uppercase text-blue-700">Rata-rata Progres</p>
+            <p id="timelineAvgProgress" class="text-xl font-bold text-blue-950">0%</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="timelineCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+  </main>
+
+  <script>
+    // ==================== INITIAL STATE ====================
+    const INITIAL_ITEMS = [
+      {
+        id: 'item-1',
+        divisi: 'Perlengkapan',
+        namaBarang: 'Kabel Roll 25 Meter',
+        jumlahBarang: 6,
+        kategori: 'Pinjam',
+        jikaMembeli: '-',
+        jikaMenyewa: '-',
+        jikaMeminjam: 'Budi (Logistik Kampus)',
+        catatanOpsional: 'Sudah tersedia 4 unit dari divisi Perlengkapan',
+        tanggalPermintaan: '2026-10-26'
+      },
+      {
+        id: 'item-2',
+        divisi: 'Humreg',
+        namaBarang: 'Lanyard & ID Card Panitia',
+        jumlahBarang: 50,
+        kategori: 'Beli',
+        jikaMembeli: 'Rp 5.000 - Rp 8.000 / pcs',
+        jikaMenyewa: '-',
+        jikaMeminjam: '-',
+        catatanOpsional: 'Desain sudah siap cetak',
+        tanggalPermintaan: '2026-10-26'
+      },
+      {
+        id: 'item-3',
+        divisi: 'Dekdok',
+        namaBarang: 'Lighting & Tripod Kamera',
+        jumlahBarang: 2,
+        kategori: 'Sewa',
+        jikaMembeli: '-',
+        jikaMenyewa: 'Sewa Kamera Bogor (@sewakamerabogor)',
+        jikaMeminjam: '-',
+        catatanOpsional: 'Ambil H-1 acara',
+        tanggalPermintaan: '2026-10-26'
+      },
+      {
+        id: 'item-4',
+        divisi: 'Acara',
+        namaBarang: 'Microphone Wireless Dual UHF',
+        jumlahBarang: 4,
+        kategori: 'Sewa',
+        jikaMembeli: '-',
+        jikaMenyewa: 'Vendor Sound System Utama',
+        jikaMeminjam: '-',
+        catatanOpsional: 'Digunakan untuk panggung utama',
+        tanggalPermintaan: '2026-10-26'
+      },
+      {
+        id: 'item-5',
+        divisi: 'Keamanan',
+        namaBarang: 'Handy Talky (HT) & Charger',
+        jumlahBarang: 6,
+        kategori: 'Sewa',
+        jikaMembeli: '-',
+        jikaMenyewa: 'Rental HT Bogor',
+        jikaMeminjam: '-',
+        catatanOpsional: 'Sudah tersedia 2 unit dari divisi Keamanan',
+        tanggalPermintaan: '2026-10-26'
+      }
+    ];
+
+    const INITIAL_TIMELINE = [
+      {
+        id: 'tl-1',
+        rentang: '21 – 23 Okt',
+        target: 'Menyiapkan spreadsheet inventaris & Form Permintaan Barang divisi.',
+        output: 'Form & sistem inventaris',
+        status: 'Selesai',
+        progres: 100
+      },
+      {
+        id: 'tl-2',
+        rentang: '24 – 27 Okt',
+        target: 'Rekapitulasi permintaan barang (pinjam/sewa/beli) dari seluruh divisi.',
+        output: 'Rekap kebutuhan alat',
+        status: 'Sedang Berjalan',
+        progres: 60
+      },
+      {
+        id: 'tl-3',
+        rentang: '28 Okt – 5 Nov',
+        target: 'Pengecekan stok, pengadaan barang tervalidasi Bendahara, & penyesuaian venue.',
+        output: 'Pengadaan barang berjalan',
+        status: 'Belum Mulai',
+        progres: 0
+      },
+      {
+        id: 'tl-4',
+        rentang: '6 – 12 Nov',
+        target: 'Pengecekan kelengkapan teknis (kabel, sound, jumlah, & fungsi).',
+        output: 'Wajib 100% alat tersedia',
+        status: 'Belum Mulai',
+        progres: 0
+      },
+      {
+        id: 'tl-5',
+        rentang: '13 – 14 Nov',
+        target: 'Packing & labeling barang per pos/pengguna, serta uji kelayakan alat.',
+        output: 'Barang ter-label & siap angkut',
+        status: 'Belum Mulai',
+        progres: 0
+      },
+      {
+        id: 'tl-6',
+        rentang: '15 Nov',
+        target: 'Distribusi alat di lokasi & penanganan kekurangan barang via Korlap.',
+        output: 'Logistik Hari H aman',
+        status: 'Belum Mulai',
+        progres: 0
+      }
+    ];
+
+    let itemsState = [...INITIAL_ITEMS];
+    let timelineState = [...INITIAL_TIMELINE];
+    let draftFormRows = [createEmptyDraftRow()];
+    let activeDivisiTab = 'ALL';
+
+    function createEmptyDraftRow() {
+      return {
+        draftId: 'draft-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        namaBarang: '',
+        jumlahBarang: 1,
+        kategori: 'Pinjam',
+        jikaMembeli: '',
+        jikaMenyewa: '',
+        jikaMeminjam: '',
+        catatanOpsional: ''
+      };
+    }
+
+    // ==================== TOAST HELPER ====================
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bgClass = type === 'success' ? 'bg-slate-900 text-white border-slate-700' : 'bg-rose-600 text-white border-rose-500';
+      toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs sm:text-sm font-medium flex items-center gap-2 fade-in ${bgClass}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3200);
+    }
+
+    // ==================== NAVIGATION ====================
+    const navFormBtn = document.getElementById('navFormBtn');
+    const navRekapBtn = document.getElementById('navRekapBtn');
+    const navTimelineBtn = document.getElementById('navTimelineBtn');
+
+    const viewForm = document.getElementById('viewForm');
+    const viewRekap = document.getElementById('viewRekap');
+    const viewTimeline = document.getElementById('viewTimeline');
+
+    function switchView(target) {
+      viewForm.classList.add('hidden');
+      viewRekap.classList.add('hidden');
+      viewTimeline.classList.add('hidden');
+
+      [navFormBtn, navRekapBtn, navTimelineBtn].forEach(btn => {
+        btn.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition text-slate-300 hover:text-white hover:bg-slate-700/60 flex items-center gap-1.5';
+      });
+
+      if (target === 'form') {
+        viewForm.classList.remove('hidden');
+        navFormBtn.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition bg-blue-600 text-white shadow-sm';
+      } else if (target === 'rekap') {
+        viewRekap.classList.remove('hidden');
+        navRekapBtn.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition bg-blue-600 text-white shadow-sm flex items-center gap-1.5';
+        renderRekapView();
+      } else if (target === 'timeline') {
+        viewTimeline.classList.remove('hidden');
+        navTimelineBtn.className = 'px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition bg-blue-600 text-white shadow-sm';
+        renderTimelineView();
+      }
+    }
+
+    navFormBtn.addEventListener('click', () => switchView('form'));
+    navRekapBtn.addEventListener('click', () => switchView('rekap'));
+    navTimelineBtn.addEventListener('click', () => switchView('timeline'));
+
+    // Toggle Ketentuan Banner
+    document.getElementById('toggleKetentuanBtn').addEventListener('click', function () {
+      const list = document.getElementById('ketentuanList');
+      const isHidden = list.classList.toggle('hidden');
+      this.textContent = isHidden ? 'Tampilkan Detail' : 'Sembunyikan Detail';
+    });
+
+    // ==================== MULTI-ITEM FORM RENDERING (Barang 1, Barang 2, dst.) ====================
+    function renderDraftItems() {
+      const container = document.getElementById('itemsContainer');
+      const badge = document.getElementById('itemDraftCountBadge');
+      badge.textContent = `${draftFormRows.length} Barang`;
+      container.innerHTML = '';
+
+      draftFormRows.forEach((row, index) => {
+        const card = document.createElement('div');
+        card.className = 'p-4 sm:p-5 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-4 fade-in';
+
+        const removeBtnHtml = draftFormRows.length > 1
+          ? `<button type="button" data-remove-draft="${row.draftId}" class="text-xs font-semibold text-rose-600 hover:text-rose-800 px-2.5 py-1 rounded-lg hover:bg-rose-50 transition">Hapus Barang ${index + 1}</button>`
+          : '';
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-lg bg-slate-900 text-white text-xs font-bold">Barang ${index + 1}</span>
+              <span class="text-xs text-slate-500">Isi rincian kebutuhan untuk Barang ${index + 1}</span>
+            </div>
+            ${removeBtnHtml}
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
+            <div class="sm:col-span-6">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Barang / Alat <span class="text-rose-600">*</span></label>
+              <input type="text" required data-field="namaBarang" data-id="${row.draftId}" value="${escapeHtml(row.namaBarang)}" placeholder="Contoh: Microphone Wireless, Kabel Roll, HT..." class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Jumlah Barang <span class="text-rose-600">*</span></label>
+              <input type="number" min="1" required data-field="jumlahBarang" data-id="${row.draftId}" value="${row.jumlahBarang}" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            </div>
+
+            <div class="sm:col-span-4">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori / Metode Pengadaan <span class="text-rose-600">*</span></label>
+              <select data-field="kategori" data-id="${row.draftId}" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600">
+                <option value="Pinjam" ${row.kategori === 'Pinjam' ? 'selected' : ''}>Pinjam</option>
+                <option value="Beli" ${row.kategori === 'Beli' ? 'selected' : ''}>Beli</option>
+                <option value="Sewa" ${row.kategori === 'Sewa' ? 'selected' : ''}>Sewa</option>
+                <option value="Sudah Tersedia di Divisi" ${row.kategori === 'Sudah Tersedia di Divisi' ? 'selected' : ''}>Sudah Tersedia di Divisi</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Jika Membeli (Perkiraan Rentang Harga)</label>
+              <input type="text" data-field="jikaMembeli" data-id="${row.draftId}" value="${escapeHtml(row.jikaMembeli)}" placeholder="Contoh: Rp 10.000 - Rp 15.000" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Jika Menyewa (Nama / Info Tempat Sewa)</label>
+              <input type="text" data-field="jikaMenyewa" data-id="${row.draftId}" value="${escapeHtml(row.jikaMenyewa)}" placeholder="Contoh: Rental Sound / IG tempat sewa" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Jika Meminjam (Nama Orang yang Meminjamkan)</label>
+              <input type="text" data-field="jikaMeminjam" data-id="${row.draftId}" value="${escapeHtml(row.jikaMeminjam)}" placeholder="Contoh: Budi (BEM / Logistik)" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan Opsional (Keterangan Ketersediaan dari Divisi)</label>
+            <input type="text" data-field="catatanOpsional" data-id="${row.draftId}" value="${escapeHtml(row.catatanOpsional)}" placeholder="Jika barang sudah tersedia dari divisi masing-masing, beri keterangan di sini..." class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      // Attach listeners for inputs and remove buttons
+      container.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', (e) => {
+          const id = e.target.getAttribute('data-id');
+          const field = e.target.getAttribute('data-field');
+          const rowObj = draftFormRows.find(r => r.draftId === id);
+          if (rowObj && field) {
+            rowObj[field] = field === 'jumlahBarang' ? Math.max(1, parseInt(e.target.value, 10) || 1) : e.target.value;
+          }
+        });
+      });
+
+      container.querySelectorAll('[data-remove-draft]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-remove-draft');
+          draftFormRows = draftFormRows.filter(r => r.draftId !== id);
+          renderDraftItems();
+        });
+      });
+    }
+
+    document.getElementById('addMoreItemBtn').addEventListener('click', () => {
+      draftFormRows.push(createEmptyDraftRow());
+      renderDraftItems();
+    });
+
+    document.getElementById('resetFormBtn').addEventListener('click', () => {
+      draftFormRows = [createEmptyDraftRow()];
+      renderDraftItems();
+      showToast('Formulir telah direset.');
+    });
+
+    document.getElementById('permintaanForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const divisi = document.getElementById('selectDivisi').value;
+      const tanggal = document.getElementById('inputTanggal').value || '2026-10-26';
+
+      const validRows = draftFormRows.filter(r => r.namaBarang.trim() !== '');
+      if (validRows.length === 0) {
+        showToast('Mohon isi minimal 1 Nama Barang.', 'error');
+        return;
+      }
+
+      validRows.forEach(r => {
+        itemsState.push({
+          id: 'item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          divisi,
+          namaBarang: r.namaBarang.trim(),
+          jumlahBarang: Number(r.jumlahBarang) || 1,
+          kategori: r.kategori,
+          jikaMembeli: r.jikaMembeli.trim() || '-',
+          jikaMenyewa: r.jikaMenyewa.trim() || '-',
+          jikaMeminjam: r.jikaMeminjam.trim() || '-',
+          catatanOpsional: r.catatanOpsional.trim() || '-',
+          tanggalPermintaan: tanggal
+        });
+      });
+
+      document.getElementById('navCountBadge').textContent = String(itemsState.length);
+      draftFormRows = [createEmptyDraftRow()];
+      renderDraftItems();
+
+      activeDivisiTab = divisi;
+      updateSheetTabStyles();
+      switchView('rekap');
+      showToast(`${validRows.length} barang berhasil ditambahkan ke Rekap - ${divisi}!`);
+    });
+
+    // ==================== REKAP PER DIVISI RENDERING ====================
+    function getFilteredItems() {
+      const query = (document.getElementById('searchBarangInput').value || '').toLowerCase().trim();
+      const katFilter = document.getElementById('filterKategoriSelect').value;
+
+      return itemsState.filter(item => {
+        const matchDivisi = activeDivisiTab === 'ALL' || item.divisi === activeDivisiTab;
+        const matchKat = katFilter === 'ALL' || item.kategori === katFilter;
+        const matchQuery = !query || [
+          item.divisi,
+          item.namaBarang,
+          item.jikaMembeli,
+          item.jikaMenyewa,
+          item.jikaMeminjam,
+          item.catatanOpsional
+        ].some(val => (val || '').toLowerCase().includes(query));
+        return matchDivisi && matchKat && matchQuery;
+      });
+    }
+
+    function updateSheetTabStyles() {
+      document.querySelectorAll('.sheet-tab-btn').forEach(btn => {
+        const div = btn.getAttribute('data-divisi');
+        if (div === activeDivisiTab) {
+          btn.className = 'sheet-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white shadow-sm';
+        } else {
+          btn.className = 'sheet-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
+        }
+      });
+    }
+
+    document.querySelectorAll('.sheet-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeDivisiTab = btn.getAttribute('data-divisi');
+        updateSheetTabStyles();
+        renderRekapView();
+      });
+    });
+
+    document.getElementById('searchBarangInput').addEventListener('input', renderRekapView);
+    document.getElementById('filterKategoriSelect').addEventListener('change', renderRekapView);
+
+    function renderRekapView() {
+      const filtered = getFilteredItems();
+      const tbody = document.getElementById('rekapTableBody');
+      tbody.innerHTML = '';
+
+      // Update KPIs
+      document.getElementById('kpiTotalJenis').textContent = String(filtered.length);
+      document.getElementById('kpiActiveScope').textContent = activeDivisiTab === 'ALL' ? 'Semua Divisi (Form Responses)' : `Sheet: Rekap - ${activeDivisiTab}`;
+      const totalUnits = filtered.reduce((acc, cur) => acc + (Number(cur.jumlahBarang) || 0), 0);
+      document.getElementById('kpiTotalUnit').textContent = String(totalUnits);
+      const pinjamSewaCount = filtered.filter(i => i.kategori === 'Pinjam' || i.kategori === 'Sewa').length;
+      document.getElementById('kpiPinjamSewa').textContent = `${pinjamSewaCount} Item`;
+      const beliSediaCount = filtered.filter(i => i.kategori === 'Beli' || i.kategori === 'Sudah Tersedia di Divisi').length;
+      document.getElementById('kpiBeliSedia').textContent = `${beliSediaCount} Item`;
+
+      if (filtered.length === 0) {
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = `
+          <td colspan="10" class="py-10 text-center text-slate-400 text-xs sm:text-sm">
+            Belum ada data barang pada filter ini. Klik tab <strong>+ Form Pengajuan</strong> untuk menambah barang.
+          </td>
+        `;
+        tbody.appendChild(emptyRow);
+        return;
+      }
+
+      const badgeColors = {
+        'Pinjam': 'bg-blue-50 text-blue-700 border-blue-200',
+        'Sewa': 'bg-amber-50 text-amber-700 border-amber-200',
+        'Beli': 'bg-purple-50 text-purple-700 border-purple-200',
+        'Sudah Tersedia di Divisi': 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      };
+
+      filtered.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/80 transition';
+        const katBadge = badgeColors[item.kategori] || 'bg-slate-100 text-slate-700 border-slate-200';
+
+        tr.innerHTML = `
+          <td class="py-3 px-3.5 font-semibold text-slate-900 whitespace-nowrap">${escapeHtml(item.divisi)}</td>
+          <td class="py-3 px-3.5 font-medium text-slate-900">${escapeHtml(item.namaBarang)}</td>
+          <td class="py-3 px-3.5 text-right font-semibold text-slate-900">${item.jumlahBarang}</td>
+          <td class="py-3 px-3.5 text-center whitespace-nowrap">
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${katBadge}">${escapeHtml(item.kategori)}</span>
+          </td>
+          <td class="py-3 px-3.5 text-slate-600">${escapeHtml(item.jikaMembeli)}</td>
+          <td class="py-3 px-3.5 text-slate-600">${escapeHtml(item.jikaMenyewa)}</td>
+          <td class="py-3 px-3.5 text-slate-600">${escapeHtml(item.jikaMeminjam)}</td>
+          <td class="py-3 px-3.5 text-slate-600">${escapeHtml(item.catatanOpsional)}</td>
+          <td class="py-3 px-3.5 text-center text-slate-500 whitespace-nowrap">${escapeHtml(item.tanggalPermintaan)}</td>
+          <td class="py-3 px-3.5 text-center whitespace-nowrap">
+            <button type="button" data-delete-item="${item.id}" class="text-xs font-semibold text-rose-600 hover:text-rose-800 px-2 py-1 rounded hover:bg-rose-50 transition">
+              Hapus
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('[data-delete-item]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-delete-item');
+          itemsState = itemsState.filter(i => i.id !== id);
+          document.getElementById('navCountBadge').textContent = String(itemsState.length);
+          renderRekapView();
+          showToast('Data barang dihapus.');
+        });
+      });
+    }
+
+    // Export CSV & Copy Table
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+      const rows = getFilteredItems();
+      const headers = ['Divisi', 'Nama Barang', 'Jumlah Barang', 'Kategori', 'Jika Membeli', 'Jika Menyewa', 'Jika Meminjam', 'Catatan Opsional', 'Tanggal Permintaan'];
+      const csvLines = [
+        headers.join(','),
+        ...rows.map(r => [
+          r.divisi, r.namaBarang, r.jumlahBarang, r.kategori,
+          r.jikaMembeli, r.jikaMenyewa, r.jikaMeminjam, r.catatanOpsional, r.tanggalPermintaan
+        ].map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(','))
+      ];
+      const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const scopeName = activeDivisiTab === 'ALL' ? 'Form_Responses_Semua_Divisi' : `Rekap_${activeDivisiTab}`;
+      a.download = `${scopeName}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('File CSV berhasil diunduh!');
+    });
+
+    document.getElementById('copyTableBtn').addEventListener('click', () => {
+      const rows = getFilteredItems();
+      const headers = ['Divisi', 'Nama Barang', 'Jumlah Barang', 'Kategori', 'Jika Membeli', 'Jika Menyewa', 'Jika Meminjam', 'Catatan Opsional', 'Tanggal Permintaan'];
+      const tsv = [
+        headers.join('\t'),
+        ...rows.map(r => [
+          r.divisi, r.namaBarang, r.jumlahBarang, r.kategori,
+          r.jikaMembeli, r.jikaMenyewa, r.jikaMeminjam, r.catatanOpsional, r.tanggalPermintaan
+        ].join('\t'))
+      ].join('\n');
+
+      const textarea = document.createElement('textarea');
+      textarea.value = tsv;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('Tabel berhasil disalin! Siap ditempel (Ctrl+V) ke Excel / Google Sheets.');
+      } catch (err) {
+        showToast('Gagal menyalin tabel.', 'error');
+      }
+      textarea.remove();
+    });
+
+    // ==================== TIMELINE VIEW RENDERING ====================
+    function renderTimelineView() {
+      const container = document.getElementById('timelineCardsContainer');
+      container.innerHTML = '';
+
+      const avg = Math.round(timelineState.reduce((acc, cur) => acc + Number(cur.progres || 0), 0) / timelineState.length);
+      document.getElementById('timelineAvgProgress').textContent = `${avg}%`;
+
+      timelineState.forEach((item, idx) => {
+        const badgeClass = item.status === 'Selesai'
+          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+          : item.status === 'Sedang Berjalan'
+          ? 'bg-blue-100 text-blue-800 border-blue-200'
+          : 'bg-amber-100 text-amber-800 border-amber-200';
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between gap-4';
+        card.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-900 text-white">Tahap ${idx + 1} • ${escapeHtml(item.rentang)}</span>
+              <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border ${badgeClass}">${escapeHtml(item.status)}</span>
+            </div>
+            <p class="text-sm font-semibold text-slate-900 pt-1">${escapeHtml(item.target)}</p>
+            <p class="text-xs text-slate-500">Output: <strong class="text-slate-700">${escapeHtml(item.output)}</strong></p>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-medium text-slate-600">Ubah Status &amp; Progres:</label>
+              <span class="font-bold text-blue-700">${item.progres}%</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <select data-tl-status="${item.id}" class="rounded-xl border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-800">
+                <option value="Belum Mulai" ${item.status === 'Belum Mulai' ? 'selected' : ''}>Belum Mulai</option>
+                <option value="Sedang Berjalan" ${item.status === 'Sedang Berjalan' ? 'selected' : ''}>Sedang Berjalan</option>
+                <option value="Selesai" ${item.status === 'Selesai' ? 'selected' : ''}>Selesai</option>
+              </select>
+              <input type="range" min="0" max="100" step="10" data-tl-progres="${item.id}" value="${item.progres}" class="flex-1 accent-blue-600 cursor-pointer" />
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      container.querySelectorAll('[data-tl-status]').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          const id = e.target.getAttribute('data-tl-status');
+          const tl = timelineState.find(t => t.id === id);
+          if (tl) {
+            tl.status = e.target.value;
+            if (tl.status === 'Selesai') tl.progres = 100;
+            if (tl.status === 'Belum Mulai') tl.progres = 0;
+            renderTimelineView();
+          }
+        });
+      });
+
+      container.querySelectorAll('[data-tl-progres]').forEach(rng => {
+        rng.addEventListener('input', (e) => {
+          const id = e.target.getAttribute('data-tl-progres');
+          const tl = timelineState.find(t => t.id === id);
+          if (tl) {
+            tl.progres = Number(e.target.value);
+            if (tl.progres === 100) tl.status = 'Selesai';
+            else if (tl.progres > 0) tl.status = 'Sedang Berjalan';
+            else tl.status = 'Belum Mulai';
+            renderTimelineView();
+          }
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Initialize App
+    renderDraftItems();
+    renderRekapView();
+  </script>
+</body>
+</html>
