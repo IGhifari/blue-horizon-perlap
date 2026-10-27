@@ -4,12 +4,21 @@ Aplikasi berbasis **ReactJS + Vite + Tailwind CSS + Supabase Auth & Database** d
 
 ## 1. Environment Variables
 
-### Frontend (`.env.local`)
+### Frontend (`.env.local` atau Vercel Environment Variables)
+Gunakan salah satu format berikut di file `.env.local` maupun di dashboard **Vercel → Project Settings → Environment Variables**:
+
 ```env
+# Format Rekomendasi (Standar Vite)
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<supabase-anon-or-publishable-key>
+
+# Format Alternatif (juga didukung via envPrefix)
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=<supabase-anon-or-publishable-key>
 ```
-> **Penting:** Jangan pernah menaruh `SUPABASE_SERVICE_ROLE_KEY` di `.env.local` atau di kode frontend.
+> **Penting:**
+> - Di Vite & Vercel, variabel frontend secara default menggunakan prefix `VITE_`. File `vite.config.js` telah dikonfigurasi dengan `envPrefix: ['VITE_', 'SUPABASE_']` agar kedua variasi nama variabel dapat terbaca secara aman.
+> - Jangan pernah menaruh `SUPABASE_SERVICE_ROLE_KEY` di environment variables frontend atau `.env.local`.
 
 ### Supabase Edge Functions (`supabase/functions/*`)
 Variabel berikut otomatis disediakan oleh runtime Supabase Edge Functions di server:

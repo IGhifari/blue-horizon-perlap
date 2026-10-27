@@ -297,3 +297,54 @@ test('Ekspor Excel melempar error jika data Supabase gagal diambil dan tidak men
     /Gagal mengambil data pengajuan dari server: Database connection failed/
   );
 });
+
+test('Validasi konfigurasi Supabase menyebutkan nama variabel yang belum tersedia tanpa menampilkan nilai rahasia', () => {
+  function validateConfig(env) {
+    const url = env?.VITE_SUPABASE_URL || env?.SUPABASE_URL;
+    const key =
+      env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+      env?.VITE_SUPABASE_ANON_KEY ||
+      env?.SUPABASE_PUBLISHABLE_KEY ||
+      env?.SUPABASE_ANON_KEY;
+
+    const missing = [];
+    if (!url) missing.push('VITE_SUPABASE_URL (atau SUPABASE_URL)');
+    if (!key) {
+      missing.push(
+        'VITE_SUPABASE_PUBLISHABLE_KEY / VITE_SUPABASE_ANON_KEY (atau SUPABASE_PUBLISHABLE_KEY / SUPABASE_ANON_KEY)'
+      );
+    }
+    if (missing.length > 0) {
+      throw new Error(
+        `Konfigurasi Supabase belum lengkap. Variabel environment berikut belum tersedia: ${missing.join(', ')}.`
+      );
+    }
+    return { url, key };
+  }
+
+  // Jika URL dan Key kosong
+  assert.throws(
+    () => validateConfig({}),
+    /VITE_SUPABASE_URL \(atau SUPABASE_URL\)/
+  );
+
+  // Jika hanya URL tersedia
+  assert.throws(
+    () => validateConfig({ VITE_SUPABASE_URL: 'https://test.supabase.co' }),
+    /VITE_SUPABASE_PUBLISHABLE_KEY/
+  );
+
+  // Jika menggunakan format standar Vite (VITE_)
+  const res1 = validateConfig({
+    VITE_SUPABASE_URL: 'https://test.supabase.co',
+    VITE_SUPABASE_PUBLISHABLE_KEY: 'test-key',
+  });
+  assert.equal(res1.url, 'https://test.supabase.co');
+
+  // Jika menggunakan format alternatif (SUPABASE_)
+  const res2 = validateConfig({
+    SUPABASE_URL: 'https://test.supabase.co',
+    SUPABASE_PUBLISHABLE_KEY: 'test-key',
+  });
+  assert.equal(res2.url, 'https://test.supabase.co');
+});
