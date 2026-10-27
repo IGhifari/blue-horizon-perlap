@@ -6,8 +6,8 @@ Aplikasi berbasis **ReactJS + Vite + Tailwind CSS + Supabase Auth & Database** d
 
 ### Frontend (`.env.local`)
 ```env
-VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=<supabase-anon-or-publishable-key>
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_PUBLISHABLE_KEY=<supabase-anon-or-publishable-key>
 ```
 > **Penting:** Jangan pernah menaruh `SUPABASE_SERVICE_ROLE_KEY` di `.env.local` atau di kode frontend.
 
