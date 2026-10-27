@@ -5,7 +5,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import RequestForm from '../components/form/RequestForm';
 
-export default function FormPage({ onSubmitItems, onNotify }) {
+export default function FormPage({ profile, onSubmitItems, onNotify }) {
   const [showKetentuan, setShowKetentuan] = useState(true);
 
   return (
@@ -72,7 +72,11 @@ export default function FormPage({ onSubmitItems, onNotify }) {
       </Card>
 
       {/* Form Pengajuan Barang */}
-      <RequestForm onSubmitItems={onSubmitItems} onNotify={onNotify} />
+      <RequestForm
+        profile={profile}
+        onSubmitItems={onSubmitItems}
+        onNotify={onNotify}
+      />
     </section>
   );
 }

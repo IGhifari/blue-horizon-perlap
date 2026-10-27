@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, RotateCcw, Send } from 'lucide-react';
 import { DIVISIONS, createEmptyDraftRow } from '../../data/initialData';
+import {
+  isMainAdmin,
+  getAllowedDivisions,
+  matchCanonicalDivision,
+} from '../../features/auth/permissions';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
@@ -8,11 +13,25 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import ItemFormCard from './ItemFormCard';
 
-export default function RequestForm({ onSubmitItems, onNotify }) {
-  const [divisi, setDivisi] = useState('Acara');
+export default function RequestForm({ profile, onSubmitItems, onNotify }) {
+  const allowedDivisions = getAllowedDivisions(profile, DIVISIONS);
+  const canChooseDivision = isMainAdmin(profile);
+  const defaultDivision = canChooseDivision
+    ? matchCanonicalDivision(profile?.divisi, DIVISIONS) || 'Perlengkapan'
+    : profile?.divisi || allowedDivisions[0] || 'Acara';
+
+  const [divisi, setDivisi] = useState(defaultDivision);
   const [tanggalPermintaan, setTanggalPermintaan] = useState('2026-10-26');
   const [draftRows, setDraftRows] = useState(() => [createEmptyDraftRow()]);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (!canChooseDivision && profile?.divisi) {
+      setDivisi(profile.divisi);
+    } else if (canChooseDivision && profile?.divisi) {
+      setDivisi(matchCanonicalDivision(profile.divisi, DIVISIONS));
+    }
+  }, [canChooseDivision, profile?.divisi]);
 
   const handleFieldChange = (draftId, field, value) => {
     setDraftRows((prev) =>
@@ -93,8 +112,12 @@ export default function RequestForm({ onSubmitItems, onNotify }) {
       return;
     }
 
+    const effectiveDivisi = canChooseDivision
+      ? divisi
+      : profile?.divisi || divisi;
+
     onSubmitItems({
-      divisi,
+      divisi: effectiveDivisi,
       tanggalPermintaan: tanggalPermintaan || '2026-10-26',
       rows: validRows,
     });
@@ -106,14 +129,19 @@ export default function RequestForm({ onSubmitItems, onNotify }) {
   return (
     <Card variant="white" shadow="lg" className="overflow-hidden">
       <form onSubmit={handleSubmit} noValidate>
-        {/* Header Divisi & Tanggal (Blue Horizon Sky/Ice Accent) */}
+        {/* Header Divisi & Tanggal */}
         <div className="p-5 sm:p-6 bg-[#DBEAFE] border-b-2 border-[#0A1936] grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             id="selectDivisi"
-            label="Divisi Pemohon"
+            label={
+              canChooseDivision
+                ? 'Divisi Pemohon'
+                : 'Divisi Pemohon (Sesuai Akun Anda)'
+            }
             required
-            value={divisi}
-            options={DIVISIONS}
+            disabled={!canChooseDivision}
+            value={canChooseDivision ? divisi : profile?.divisi || divisi}
+            options={allowedDivisions.length ? allowedDivisions : DIVISIONS}
             onChange={(e) => setDivisi(e.target.value)}
           />
 

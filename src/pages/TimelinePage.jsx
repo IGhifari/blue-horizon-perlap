@@ -5,6 +5,7 @@ import TimelineCard from '../components/timeline/TimelineCard';
 
 export default function TimelinePage({
   timeline,
+  canEdit = false,
   onChangeStatus,
   onChangeProgress,
 }) {
@@ -30,7 +31,9 @@ export default function TimelinePage({
             Timeline &amp; Target Kerja Divisi Perlengkapan (21 Okt – 15 Nov)
           </h2>
           <p className="text-xs sm:text-sm font-semibold text-[#BAE6FD] mt-1">
-            Klik status atau geser progres pada setiap tahapan kerja untuk memperbarui capaian tim Perlengkapan.
+            {canEdit
+              ? 'Klik status atau geser progres pada setiap tahapan kerja untuk memperbarui capaian tim Perlengkapan.'
+              : 'Pantau perkembangan tahapan kerja logistik Divisi Perlengkapan.'}
           </p>
         </div>
 
@@ -56,6 +59,7 @@ export default function TimelinePage({
             key={item.id}
             item={item}
             index={idx}
+            canEdit={canEdit}
             onChangeStatus={onChangeStatus}
             onChangeProgress={onChangeProgress}
           />

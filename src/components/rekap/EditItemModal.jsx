@@ -3,21 +3,26 @@ import { X, Save } from 'lucide-react';
 import {
   DIVISIONS,
   CATEGORIES,
-  PERLAP_STATUS_OPTIONS,
 } from '../../data/initialData';
+import {
+  isMainAdmin,
+  getAllowedDivisions,
+} from '../../features/auth/permissions';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
 
-export default function EditItemModal({ item, onClose, onSave }) {
+export default function EditItemModal({ item, profile, onClose, onSave }) {
   const isNew = !item?.id;
+  const canChooseDivision = isMainAdmin(profile);
+  const allowedDivisions = getAllowedDivisions(profile, DIVISIONS);
+
   const [formData, setFormData] = useState({
-    divisi: 'Perlengkapan',
+    divisi: profile?.divisi || 'Perlengkapan',
     namaBarang: '',
     jumlahBarang: 1,
     kategori: 'Pinjam',
-    tersediaDiPerlap: 'Belum Ada',
     jikaMembeli: '',
     jikaMenyewa: '',
     jikaMeminjam: '',
@@ -28,12 +33,15 @@ export default function EditItemModal({ item, onClose, onSave }) {
 
   useEffect(() => {
     if (item) {
+      const lockedDivisi = canChooseDivision
+        ? item.divisi || 'Perlengkapan'
+        : profile?.divisi || item.divisi;
+
       setFormData({
-        divisi: item.divisi || 'Perlengkapan',
+        divisi: lockedDivisi,
         namaBarang: item.namaBarang || '',
         jumlahBarang: item.jumlahBarang || 1,
         kategori: item.kategori || 'Pinjam',
-        tersediaDiPerlap: item.tersediaDiPerlap || 'Belum Ada',
         jikaMembeli: item.jikaMembeli === '-' ? '' : item.jikaMembeli || '',
         jikaMenyewa: item.jikaMenyewa === '-' ? '' : item.jikaMenyewa || '',
         jikaMeminjam: item.jikaMeminjam === '-' ? '' : item.jikaMeminjam || '',
@@ -42,7 +50,7 @@ export default function EditItemModal({ item, onClose, onSave }) {
         tanggalPermintaan: item.tanggalPermintaan || '2026-10-26',
       });
     }
-  }, [item]);
+  }, [item, canChooseDivision, profile?.divisi]);
 
   if (!item) return null;
 
@@ -70,13 +78,16 @@ export default function EditItemModal({ item, onClose, onSave }) {
       return;
     }
 
+    const finalDivisi = canChooseDivision
+      ? formData.divisi
+      : profile?.divisi || formData.divisi;
+
     onSave({
       ...(item.id ? { id: item.id } : {}),
-      divisi: formData.divisi,
+      divisi: finalDivisi,
       namaBarang: formData.namaBarang.trim(),
       jumlahBarang: Math.max(1, Number(formData.jumlahBarang) || 1),
       kategori: formData.kategori,
-      tersediaDiPerlap: formData.tersediaDiPerlap || 'Belum Ada',
       jikaMembeli: formData.jikaMembeli.trim() || '-',
       jikaMenyewa: formData.jikaMenyewa.trim() || '-',
       jikaMeminjam: formData.jikaMeminjam.trim() || '-',
@@ -103,8 +114,8 @@ export default function EditItemModal({ item, onClose, onSave }) {
             className="text-sm sm:text-base font-black"
           >
             {isNew
-              ? 'Tambah Data Barang Baru (Admin CRUD)'
-              : 'Edit Data Barang & Ketersediaan Perlap (Admin CRUD)'}
+              ? 'Tambah Data Barang Baru'
+              : 'Edit Data Barang'}
           </h3>
           <button
             type="button"
@@ -126,10 +137,13 @@ export default function EditItemModal({ item, onClose, onSave }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               id="modal-divisi"
-              label="Divisi"
+              label={
+                canChooseDivision ? 'Divisi' : 'Divisi (Terkunci Sesuai Role)'
+              }
               required
+              disabled={!canChooseDivision}
               value={formData.divisi}
-              options={DIVISIONS}
+              options={allowedDivisions.length ? allowedDivisions : DIVISIONS}
               onChange={(e) => handleChange('divisi', e.target.value)}
             />
             <Input
@@ -166,7 +180,7 @@ export default function EditItemModal({ item, onClose, onSave }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 rounded-xl bg-[#DBEAFE] border-2 border-[#0A1936]">
+          <div className="p-3.5 rounded-xl bg-[#DBEAFE] border-2 border-[#0A1936]">
             <Select
               id="modal-kategori"
               label="Kategori Pengadaan"
@@ -174,16 +188,6 @@ export default function EditItemModal({ item, onClose, onSave }) {
               value={formData.kategori}
               options={CATEGORIES}
               onChange={(e) => handleChange('kategori', e.target.value)}
-            />
-            <Select
-              id="modal-tersediaDiPerlap"
-              label="Sudah Tersedia di Divisi Perlap?"
-              required
-              value={formData.tersediaDiPerlap}
-              options={PERLAP_STATUS_OPTIONS}
-              onChange={(e) =>
-                handleChange('tersediaDiPerlap', e.target.value)
-              }
             />
           </div>
 

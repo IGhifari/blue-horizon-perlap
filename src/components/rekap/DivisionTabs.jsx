@@ -1,20 +1,30 @@
-import { FileSpreadsheet, Download, Copy, Plus } from 'lucide-react';
+import { FileSpreadsheet, Plus } from 'lucide-react';
 import { DIVISIONS } from '../../data/initialData';
+import {
+  isMainAdmin,
+  canManageDivisionItems,
+} from '../../features/auth/permissions';
 import Button from '../ui/Button';
 
 export default function DivisionTabs({
   activeDivisiTab,
   onSelectDivisi,
-  isAdmin,
+  profile,
   onExportExcel,
-  onExportCsv,
-  onCopyTable,
+  isExporting = false,
   onAddNewModal,
 }) {
-  const tabs = [
-    { id: 'ALL', label: 'Semua (Form Responses)' },
-    ...DIVISIONS.map((div) => ({ id: div, label: `Rekap - ${div}` })),
-  ];
+  const showAllTabs = isMainAdmin(profile);
+  const canEditAndExport = canManageDivisionItems(profile);
+
+  const tabs = showAllTabs
+    ? [
+        { id: 'ALL', label: 'Semua (Form Responses)' },
+        ...DIVISIONS.map((div) => ({ id: div, label: `Rekap - ${div}` })),
+      ]
+    : profile?.divisi
+      ? [{ id: profile.divisi, label: `Rekap - ${profile.divisi}` }]
+      : [];
 
   return (
     <div className="p-4 sm:p-5 bg-[#DBEAFE] border-b-2 border-[#0A1936] flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -25,7 +35,8 @@ export default function DivisionTabs({
         aria-label="Filter Sheet Divisi"
       >
         {tabs.map((tab) => {
-          const isActive = activeDivisiTab === tab.id;
+          const isActive =
+            activeDivisiTab === tab.id || (!showAllTabs && tabs.length === 1);
           return (
             <button
               key={tab.id}
@@ -45,8 +56,8 @@ export default function DivisionTabs({
         })}
       </div>
 
-      {/* Tombol Aksi Khusus Admin */}
-      {isAdmin && (
+      {/* Tombol Aksi Khusus Admin Utama & Admin Divisi */}
+      {canEditAndExport && (
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -61,28 +72,11 @@ export default function DivisionTabs({
             type="button"
             variant="mint"
             size="sm"
+            disabled={isExporting}
             onClick={onExportExcel}
           >
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Ekspor Excel (.xls)</span>
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onExportCsv}
-          >
-            <Download className="w-4 h-4" />
-            <span>Unduh CSV</span>
-          </Button>
-          <Button
-            type="button"
-            variant="blue"
-            size="sm"
-            onClick={onCopyTable}
-          >
-            <Copy className="w-4 h-4" />
-            <span>Salin ke Spreadsheet</span>
+            <span>{isExporting ? 'Mengekspor...' : 'Ekspor Excel (.xlsx)'}</span>
           </Button>
         </div>
       )}

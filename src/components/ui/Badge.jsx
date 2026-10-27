@@ -5,10 +5,6 @@ const BADGE_VARIANTS = {
   Beli: 'bg-[#C7D2FE] text-[#0A1936]',
   'Sudah Tersedia di Divisi': 'bg-[#5EEAD4] text-[#0A1936]',
 
-  // Status ketersediaan di Divisi Perlap
-  'Sudah Ada': 'bg-[#5EEAD4] text-[#0A1936]',
-  'Belum Ada': 'bg-[#FDA4AF] text-[#0A1936]',
-
   // Status timeline
   Selesai: 'bg-[#5EEAD4] text-[#0A1936]',
   'Sedang Berjalan': 'bg-[#38BDF8] text-[#0A1936]',

@@ -1,23 +1,103 @@
-import { useState, useCallback } from 'react';
-import { INITIAL_ITEMS, INITIAL_TIMELINE } from './data/initialData';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { useRoleRoute } from './hooks/useRoleRoute';
+import { useState, useCallback, useEffect } from 'react';
+import { INITIAL_TIMELINE } from './data/initialData';
+import { AuthProvider } from './features/auth/AuthContext';
+import { useAuth } from './hooks/useAuth';
+import {
+  ROLES,
+  resolveEffectiveDivisionForCreate,
+  canEditItem,
+  canDeleteItem,
+  filterItemsByProfileAccess,
+} from './features/auth/permissions';
 import Header from './components/layout/Header';
 import Toast from './components/ui/Toast';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
 import FormPage from './pages/FormPage';
 import RekapPage from './pages/RekapPage';
 import TimelinePage from './pages/TimelinePage';
+import { supabase } from './lib/supabaseClient';
 
-export default function App() {
-  const { isAdmin } = useRoleRoute();
-  const [items, setItems] = useLocalStorage('perlap_items_v2', INITIAL_ITEMS);
-  const [timeline, setTimeline] = useLocalStorage(
-    'perlap_timeline_v1',
-    INITIAL_TIMELINE
-  );
-  const [activeView, setActiveView] = useState(() =>
-    isAdmin ? 'rekap' : 'form'
-  );
+const LEGACY_LOCAL_STORAGE_KEYS = [
+  'perlap_items_v1',
+  'perlap_items_v2',
+  'perlap_timeline_v1',
+];
+
+function clearLegacyLocalStorage() {
+  try {
+    LEGACY_LOCAL_STORAGE_KEYS.forEach((key) => {
+      window.localStorage.removeItem(key);
+    });
+  } catch {
+    // Abaikan jika akses localStorage dibatasi oleh browser
+  }
+}
+
+const toDbItem = (item) => {
+  const rawNote = String(item.catatanOpsional ?? '')
+    .replace(/\[PERLAP:SUDAH_ADA\]\s*/g, '')
+    .trim();
+  const cleanNote = rawNote || '-';
+
+  return {
+    divisi: item.divisi,
+    nama_barang: item.namaBarang,
+    jumlah_barang: Number(item.jumlahBarang) || 1,
+    kategori: item.kategori,
+    jika_membeli: item.jikaMembeli || null,
+    jika_menyewa: item.jikaMenyewa || null,
+    jika_meminjam: item.jikaMeminjam || null,
+    catatan_opsional: cleanNote,
+    tanggal_permintaan: item.tanggalPermintaan,
+  };
+};
+
+const fromDbItem = (item) => {
+  const rawCatatan = String(item.catatan_opsional ?? '');
+  const cleanCatatan = rawCatatan
+    .replace(/\[PERLAP:SUDAH_ADA\]\s*/g, '')
+    .trim();
+
+  return {
+    id: item.id,
+    divisi: item.divisi,
+    namaBarang: item.nama_barang,
+    jumlahBarang: item.jumlah_barang,
+    kategori: item.kategori,
+    jikaMembeli: item.jika_membeli || '-',
+    jikaMenyewa: item.jika_menyewa || '-',
+    jikaMeminjam: item.jika_meminjam || '-',
+    catatanOpsional: cleanCatatan || '-',
+    tanggalPermintaan: item.tanggal_permintaan,
+  };
+};
+
+const toDbTimeline = (item, index) => ({
+  urutan: index + 1,
+  rentang: item.rentang,
+  target: item.target,
+  output: item.output,
+  status: item.status,
+  progres: item.progres,
+});
+
+function AuthenticatedPortal() {
+  const {
+    profile,
+    loading,
+    authError,
+    isAuthenticated,
+    isMainAdmin,
+    isDivisionAdmin,
+    canManageTimeline,
+    login,
+    logout,
+  } = useAuth();
+
+  const [items, setItems] = useState([]);
+  const [timeline, setTimeline] = useState([]);
+  const [activeView, setActiveView] = useState('form');
   const [activeDivisiTab, setActiveDivisiTab] = useState('ALL');
   const [toasts, setToasts] = useState([]);
 
@@ -27,172 +107,376 @@ export default function App() {
 
   const notify = useCallback(
     (message, type = 'success') => {
-      const id =
-        'toast-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+      const id = `toast-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 6)}`;
+
       setToasts((prev) => [...prev, { id, message, type }]);
-      setTimeout(() => {
-        dismissToast(id);
-      }, 3200);
+      setTimeout(() => dismissToast(id), 3200);
     },
     [dismissToast]
   );
 
-  const handleSubmitItems = ({ divisi, tanggalPermintaan, rows }) => {
-    const newEntries = rows.map((r, idx) => ({
-      id: `item-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
-      divisi,
-      namaBarang: r.namaBarang.trim(),
-      jumlahBarang: Math.max(1, Number(r.jumlahBarang) || 1),
-      kategori: r.kategori,
-      tersediaDiPerlap: r.tersediaDiPerlap || 'Belum Ada',
-      jikaMembeli: r.jikaMembeli.trim() || '-',
-      jikaMenyewa: r.jikaMenyewa.trim() || '-',
-      jikaMeminjam: r.jikaMeminjam.trim() || '-',
-      catatanOpsional: r.catatanOpsional.trim() || '-',
-      tanggalPermintaan,
-    }));
+  // Bersihkan key localStorage warisan saat aplikasi pertama kali dibuka
+  useEffect(() => {
+    clearLegacyLocalStorage();
+  }, []);
 
-    setItems((prev) => [...prev, ...newEntries]);
-    setActiveDivisiTab(divisi);
+  // Sesuaikan tab divisi default berdasarkan role dan divisi pengguna yang login
+  useEffect(() => {
+    if (!profile) {
+      setItems([]);
+      setTimeline([]);
+      return;
+    }
 
-    if (isAdmin) {
+    if (profile.role === ROLES.ADMIN) {
+      setActiveDivisiTab('ALL');
+    } else if (profile.divisi) {
+      setActiveDivisiTab(profile.divisi);
+    }
+  }, [profile]);
+
+  // Ambil data dari Supabase hanya ketika pengguna sudah terautentikasi
+  const loadData = useCallback(async () => {
+    if (!isAuthenticated || !profile) return;
+
+    const requestsQuery =
+      profile.role === ROLES.ADMIN
+        ? supabase.from('requests').select('*').order('created_at')
+        : supabase
+            .from('requests')
+            .select('*')
+            .eq('divisi', profile.divisi)
+            .order('created_at');
+
+    const [requestsResult, timelineResult] = await Promise.all([
+      requestsQuery,
+      supabase.from('timeline_tasks').select('*').order('urutan'),
+    ]);
+
+    if (requestsResult.error) {
+      console.error('Gagal mengambil pengajuan:', requestsResult.error);
+      notify(
+        'Gagal mengambil data pengajuan. Periksa koneksi dan kebijakan RLS.',
+        'error'
+      );
+    } else {
+      const mapped = requestsResult.data.map(fromDbItem);
+      setItems(filterItemsByProfileAccess(mapped, profile));
+    }
+
+    if (timelineResult.error) {
+      console.error('Gagal mengambil timeline:', timelineResult.error);
+      notify('Gagal mengambil timeline.', 'error');
+    } else if (timelineResult.data.length === 0 && profile.role === ROLES.ADMIN) {
+      const { data, error } = await supabase
+        .from('timeline_tasks')
+        .insert(INITIAL_TIMELINE.map(toDbTimeline))
+        .select('*')
+        .order('urutan');
+
+      if (error) {
+        console.error('Gagal membuat timeline awal:', error);
+        setTimeline(INITIAL_TIMELINE);
+      } else {
+        setTimeline(data);
+      }
+    } else {
+      setTimeline(timelineResult.data);
+    }
+  }, [isAuthenticated, profile, notify]);
+
+  useEffect(() => {
+    if (isAuthenticated && profile) {
+      loadData();
+    }
+  }, [isAuthenticated, profile, loadData]);
+  
+  const handleLogin = async (username, password) => {
+    const result = await login(username, password);
+    const loggedProfile = result.profile;
+    if (
+      loggedProfile.role === ROLES.ADMIN ||
+      loggedProfile.role === ROLES.ADMIN_DIVISI
+    ) {
       setActiveView('rekap');
-      notify(
-        `${newEntries.length} barang berhasil ditambahkan ke Rekap - ${divisi}!`
-      );
     } else {
-      notify(
-        `Pengajuan ${newEntries.length} barang dari Divisi ${divisi} berhasil dikirim!`
-      );
+      setActiveView('form');
+    }
+    notify(`Selamat datang, @${loggedProfile.username}!`);
+  };
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setItems([]);
+      setTimeline([]);
+      setActiveView('form');
+      notify('Anda telah keluar dari sesi.');
+    } catch (err) {
+      notify(err?.message || 'Gagal keluar dari sesi.', 'error');
     }
   };
 
-  const handleTogglePerlapStatus = (id, newStatus) => {
-    if (!isAdmin) return;
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, tersediaDiPerlap: newStatus } : item
-      )
-    );
-    notify(`Status ketersediaan di Perlap diubah menjadi "${newStatus}".`);
+  // Simpan pengajuan form ke database Supabase (divisi divalidasi dari profil)
+  const handleSubmitItems = async ({
+    divisi,
+    tanggalPermintaan,
+    rows,
+  }) => {
+    let effectiveDivisi;
+    try {
+      effectiveDivisi = resolveEffectiveDivisionForCreate(profile, divisi);
+    } catch (err) {
+      notify(err.message, 'error');
+      return;
+    }
+
+    const newEntries = rows
+      .filter((r) => r.namaBarang.trim())
+      .map((r) => ({
+        divisi: effectiveDivisi,
+        namaBarang: r.namaBarang.trim(),
+        jumlahBarang: Math.max(1, Number(r.jumlahBarang) || 1),
+        kategori: r.kategori,
+        jikaMembeli: r.jikaMembeli.trim() || '-',
+        jikaMenyewa: r.jikaMenyewa.trim() || '-',
+        jikaMeminjam: r.jikaMeminjam.trim() || '-',
+        catatanOpsional: r.catatanOpsional.trim() || '-',
+        tanggalPermintaan,
+      }));
+
+    if (!newEntries.length) {
+      notify('Isi minimal satu nama barang.', 'error');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('requests')
+      .insert(newEntries.map(toDbItem))
+      .select('*');
+
+    if (error) {
+      console.error(error);
+      notify(`Gagal menyimpan: ${error.message}`, 'error');
+      return;
+    }
+
+    setItems((prev) => [...prev, ...data.map(fromDbItem)]);
+    setActiveDivisiTab(effectiveDivisi);
+
+    if (isMainAdmin || isDivisionAdmin) {
+      setActiveView('rekap');
+    }
+
+    notify(`${data.length} pengajuan untuk divisi ${effectiveDivisi} berhasil disimpan!`);
   };
 
-  const handleSaveCrudItem = (payload) => {
-    if (!isAdmin) return;
+  // Tambah atau edit barang dari halaman rekap ke Supabase
+  const handleSaveCrudItem = async (payload) => {
     if (payload.id) {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === payload.id ? { ...item, ...payload } : item
-        )
-      );
-      notify(`Data "${payload.namaBarang}" berhasil diperbarui!`);
+      const existingItem = items.find((item) => item.id === payload.id);
+      if (!canEditItem(profile, existingItem, payload)) {
+        notify(
+          'Akses ditolak: Anda hanya dapat mengubah data divisi Anda sendiri.',
+          'error'
+        );
+        return;
+      }
     } else {
-      const newItem = {
-        ...payload,
-        id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      };
-      setItems((prev) => [...prev, newItem]);
-      notify(`Barang "${payload.namaBarang}" berhasil ditambahkan oleh Admin!`);
+      try {
+        payload.divisi = resolveEffectiveDivisionForCreate(
+          profile,
+          payload.divisi
+        );
+      } catch (err) {
+        notify(err.message, 'error');
+        return;
+      }
     }
+
+    const dbPayload = toDbItem(payload);
+    let result;
+
+    if (payload.id) {
+      result = await supabase
+        .from('requests')
+        .update(dbPayload)
+        .eq('id', payload.id)
+        .select('*')
+        .single();
+    } else {
+      result = await supabase
+        .from('requests')
+        .insert(dbPayload)
+        .select('*')
+        .single();
+    }
+
+    if (result.error) {
+      notify(`Gagal menyimpan barang: ${result.error.message}`, 'error');
+      return;
+    }
+
+    const savedItem = fromDbItem(result.data);
+
+    setItems((prev) =>
+      payload.id
+        ? prev.map((item) => (item.id === payload.id ? savedItem : item))
+        : [...prev, savedItem]
+    );
+
+    notify('Data barang berhasil disimpan!');
   };
 
-  const handleDeleteItem = (id) => {
-    if (!isAdmin) return;
+  // Hapus barang dari database Supabase
+  const handleDeleteItem = async (id) => {
+    const existingItem = items.find((item) => item.id === id);
+    if (!canDeleteItem(profile, existingItem)) {
+      notify(
+        'Akses ditolak: Anda tidak memiliki izin untuk menghapus data ini.',
+        'error'
+      );
+      return;
+    }
+
+    const { error } = await supabase
+      .from('requests')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      notify(`Gagal menghapus: ${error.message}`, 'error');
+      return;
+    }
+
     setItems((prev) => prev.filter((item) => item.id !== id));
-    notify('Data barang dihapus.');
+    notify('Data barang berhasil dihapus.');
   };
 
-  const handleResetDefaultData = () => {
-    if (!isAdmin) return;
-    setItems(INITIAL_ITEMS);
-    setTimeline(INITIAL_TIMELINE);
-    setActiveDivisiTab('ALL');
-    notify('Data dikembalikan ke data awal.');
+  // Simpan perubahan timeline ke Supabase (Hanya Admin Utama)
+  const saveTimeline = async (id, status, progres) => {
+    if (!canManageTimeline) {
+      notify('Hanya Admin Utama yang dapat mengubah timeline.', 'error');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('timeline_tasks')
+      .update({ status, progres })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      notify(`Gagal menyimpan timeline: ${error.message}`, 'error');
+      return;
+    }
+
+    setTimeline((prev) => prev.map((tl) => (tl.id === id ? data : tl)));
   };
 
-  const handleChangeTimelineStatus = (id, newStatus) => {
-    setTimeline((prev) =>
-      prev.map((tl) => {
-        if (tl.id !== id) return tl;
-        let nextProgres = tl.progres;
-        if (newStatus === 'Selesai') {
-          nextProgres = 100;
-        } else if (newStatus === 'Belum Mulai') {
-          nextProgres = 0;
-        } else if (
-          newStatus === 'Sedang Berjalan' &&
-          (tl.progres === 0 || tl.progres === 100)
-        ) {
-          nextProgres = 50;
-        }
-        return {
-          ...tl,
-          status: newStatus,
-          progres: nextProgres,
-        };
-      })
-    );
+  const handleChangeTimelineStatus = async (id, newStatus) => {
+    if (!canManageTimeline) return;
+
+    const current = timeline.find((tl) => tl.id === id);
+    if (!current) return;
+
+    let progres = current.progres;
+
+    if (newStatus === 'Selesai') progres = 100;
+    else if (newStatus === 'Belum Mulai') progres = 0;
+    else if (progres === 0 || progres === 100) progres = 50;
+
+    await saveTimeline(id, newStatus, progres);
   };
 
-  const handleChangeTimelineProgress = (id, newProgres) => {
-    setTimeline((prev) =>
-      prev.map((tl) => {
-        if (tl.id !== id) return tl;
-        let nextStatus = 'Belum Mulai';
-        if (newProgres === 100) {
-          nextStatus = 'Selesai';
-        } else if (newProgres > 0) {
-          nextStatus = 'Sedang Berjalan';
-        }
-        return {
-          ...tl,
-          progres: newProgres,
-          status: nextStatus,
-        };
-      })
-    );
+  const handleChangeTimelineProgress = async (id, newProgres) => {
+    if (!canManageTimeline) return;
+
+    const progres = Math.max(0, Math.min(100, Number(newProgres)));
+    const status =
+      progres === 100
+        ? 'Selesai'
+        : progres > 0
+          ? 'Sedang Berjalan'
+          : 'Belum Mulai';
+
+    await saveTimeline(id, status, progres);
   };
 
-  const currentView = isAdmin ? activeView : 'form';
+  const visibleItemsCount = filterItemsByProfileAccess(items, profile).length;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#EAF2FF] text-[#0A1936]">
+    <>
       <Toast toasts={toasts} onDismiss={dismissToast} />
 
-      <Header
-        activeView={currentView}
-        onSelectView={setActiveView}
-        totalItemsCount={items.length}
-        isAdmin={isAdmin}
-      />
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {currentView === 'form' && (
-          <FormPage onSubmitItems={handleSubmitItems} onNotify={notify} />
-        )}
-
-        {isAdmin && currentView === 'rekap' && (
-          <RekapPage
-            items={items}
-            isAdmin={isAdmin}
-            activeDivisiTab={activeDivisiTab}
-            onSelectDivisi={setActiveDivisiTab}
-            onTogglePerlapStatus={handleTogglePerlapStatus}
-            onSaveCrudItem={handleSaveCrudItem}
-            onDeleteItem={handleDeleteItem}
-            onResetDefaultData={handleResetDefaultData}
-            onNotify={notify}
+      <ProtectedRoute
+        loading={loading}
+        isAuthenticated={isAuthenticated}
+        profile={profile}
+        fallbackLogin={
+          <LoginPage onLogin={handleLogin} authError={authError} />
+        }
+      >
+        <div className="min-h-screen flex flex-col bg-[#EAF2FF] text-[#0A1936]">
+          <Header
+            activeView={activeView}
+            onSelectView={setActiveView}
+            totalItemsCount={visibleItemsCount}
+            profile={profile}
+            onLogout={handleLogout}
           />
-        )}
 
-        {isAdmin && currentView === 'timeline' && (
-          <TimelinePage
-            timeline={timeline}
-            onChangeStatus={handleChangeTimelineStatus}
-            onChangeProgress={handleChangeTimelineProgress}
-          />
-        )}
-      </main>
-    </div>
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            {activeView === 'form' && (
+              <FormPage
+                profile={profile}
+                onSubmitItems={handleSubmitItems}
+                onNotify={notify}
+              />
+            )}
+
+            {activeView === 'rekap' && (
+              <RekapPage
+                items={items}
+                profile={profile}
+                activeDivisiTab={activeDivisiTab}
+                onSelectDivisi={setActiveDivisiTab}
+                onSaveCrudItem={handleSaveCrudItem}
+                onDeleteItem={handleDeleteItem}
+                onNotify={notify}
+              />
+            )}
+
+            {activeView === 'timeline' && (
+              <ProtectedRoute
+                loading={false}
+                isAuthenticated={isAuthenticated}
+                profile={profile}
+                allowedRoles={[ROLES.ADMIN]}
+                onReturnAllowedView={() => setActiveView('form')}
+              >
+                <TimelinePage
+                  timeline={timeline}
+                  canEdit={canManageTimeline}
+                  onChangeStatus={handleChangeTimelineStatus}
+                  onChangeProgress={handleChangeTimelineProgress}
+                />
+              </ProtectedRoute>
+            )}
+          </main>
+        </div>
+      </ProtectedRoute>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AuthenticatedPortal />
+    </AuthProvider>
   );
 }

@@ -13,11 +13,6 @@ export const CATEGORIES = [
   'Sudah Tersedia di Divisi',
 ];
 
-export const PERLAP_STATUS_OPTIONS = [
-  'Belum Ada',
-  'Sudah Ada',
-];
-
 export const TIMELINE_STATUSES = [
   'Belum Mulai',
   'Sedang Berjalan',
@@ -58,7 +53,6 @@ export const INITIAL_ITEMS = [
     namaBarang: 'Kabel Roll 25 Meter',
     jumlahBarang: 6,
     kategori: 'Pinjam',
-    tersediaDiPerlap: 'Sudah Ada',
     jikaMembeli: '-',
     jikaMenyewa: '-',
     jikaMeminjam: 'Budi (Logistik Kampus)',
@@ -71,7 +65,6 @@ export const INITIAL_ITEMS = [
     namaBarang: 'Lanyard & ID Card Panitia',
     jumlahBarang: 50,
     kategori: 'Beli',
-    tersediaDiPerlap: 'Belum Ada',
     jikaMembeli: 'Rp 5.000 - Rp 8.000 / pcs',
     jikaMenyewa: '-',
     jikaMeminjam: '-',
@@ -84,7 +77,6 @@ export const INITIAL_ITEMS = [
     namaBarang: 'Lighting & Tripod Kamera',
     jumlahBarang: 2,
     kategori: 'Sewa',
-    tersediaDiPerlap: 'Belum Ada',
     jikaMembeli: '-',
     jikaMenyewa: 'Sewa Kamera Bogor (@sewakamerabogor)',
     jikaMeminjam: '-',
@@ -97,7 +89,6 @@ export const INITIAL_ITEMS = [
     namaBarang: 'Microphone Wireless Dual UHF',
     jumlahBarang: 4,
     kategori: 'Sewa',
-    tersediaDiPerlap: 'Belum Ada',
     jikaMembeli: '-',
     jikaMenyewa: 'Vendor Sound System Utama',
     jikaMeminjam: '-',
@@ -110,7 +101,6 @@ export const INITIAL_ITEMS = [
     namaBarang: 'Handy Talky (HT) & Charger',
     jumlahBarang: 6,
     kategori: 'Sewa',
-    tersediaDiPerlap: 'Sudah Ada',
     jikaMembeli: '-',
     jikaMenyewa: 'Rental HT Bogor',
     jikaMeminjam: '-',

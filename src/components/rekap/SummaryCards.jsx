@@ -1,4 +1,4 @@
-import { Package, Layers, Handshake, CheckCircle2 } from 'lucide-react';
+import { Package, Layers, Handshake, ShoppingBag } from 'lucide-react';
 import Card from '../ui/Card';
 
 export default function SummaryCards({ filteredItems, activeDivisiTab }) {
@@ -10,10 +10,9 @@ export default function SummaryCards({ filteredItems, activeDivisiTab }) {
   const pinjamSewaCount = filteredItems.filter(
     (i) => i.kategori === 'Pinjam' || i.kategori === 'Sewa'
   ).length;
-  const sudahAdaPerlapCount = filteredItems.filter(
-    (i) => (i.tersediaDiPerlap || 'Belum Ada') === 'Sudah Ada'
+  const beliCount = filteredItems.filter(
+    (i) => i.kategori === 'Beli'
   ).length;
-  const belumAdaPerlapCount = totalJenis - sudahAdaPerlapCount;
 
   const activeScopeLabel =
     activeDivisiTab === 'ALL'
@@ -43,11 +42,11 @@ export default function SummaryCards({ filteredItems, activeDivisiTab }) {
       icon: Handshake,
     },
     {
-      title: 'Tersedia di Divisi Perlap',
-      value: `${sudahAdaPerlapCount} Ada / ${belumAdaPerlapCount} Belum`,
-      subtitle: 'Stok sudah tersedia di Perlap',
+      title: 'Kebutuhan Beli',
+      value: `${beliCount} Item`,
+      subtitle: 'Pengadaan barang baru',
       variant: 'mint',
-      icon: CheckCircle2,
+      icon: ShoppingBag,
     },
   ];
 

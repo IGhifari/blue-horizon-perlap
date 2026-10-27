@@ -1,34 +1,60 @@
-# Portal Logistik & Peminjaman Barang Acara — Divisi Perlengkapan
+# Portal Logistik & Peminjaman Barang Acara — Divisi Perlengkapan (Blue Horizon)
 
-Aplikasi berbasis **ReactJS + Vite + Tailwind CSS** dengan desain **Neobrutalism UI** untuk pendataan, pengajuan, rekapitulasi per divisi, dan pelacakan timeline kerja Divisi Perlengkapan (21 Okt – 15 Nov).
+Aplikasi berbasis **ReactJS + Vite + Tailwind CSS + Supabase Auth & Database** dengan desain **Neobrutalism UI** serta kontrol akses berbasis **Role & Divisi (RBAC + RLS)**.
 
-## Cara Menjalankan Project Secara Lokal
+## 1. Environment Variables
 
-1. Instal seluruh dependency:
-   ```bash
-   npm install
+### Frontend (`.env.local`)
+```env
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=<supabase-anon-or-publishable-key>
+```
+> **Penting:** Jangan pernah menaruh `SUPABASE_SERVICE_ROLE_KEY` di `.env.local` atau di kode frontend.
+
+### Supabase Edge Functions (`supabase/functions/*`)
+Variabel berikut otomatis disediakan oleh runtime Supabase Edge Functions di server:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+## 2. Setup Database, RLS & Akun Admin Utama Pertama
+
+1. Buka **Supabase Dashboard → SQL Editor**, lalu jalankan isi file migrasi:
+   - `supabase/migrations/20261026000001_rbac_rls_policies.sql`
+2. Buat pengguna pertama di **Supabase Dashboard → Authentication → Users → Add User**:
+   - Email: `admin_perlap@perlap.internal` (atau email pilihan Anda)
+   - Password: `<password-kuat>`
+   - Centang **Auto Confirm User**
+3. Salin `UUID` user tersebut, lalu jalankan perintah satu kali berikut di **SQL Editor** untuk menetapkan akun tersebut sebagai **Admin Utama** pertama:
+   ```sql
+   SELECT public.setup_initial_admin(
+     '<UUID_USER_DARI_AUTH>',
+     'admin_perlap',
+     'Perlengkapan'
+   );
    ```
-2. Jalankan server pengembangan (Vite):
+   *(Fungsi `setup_initial_admin` hanya dapat dijalankan jika belum ada akun ber-role `admin` di tabel `public.profiles`).*
+
+4. *(Opsional)* Deploy Supabase Edge Functions untuk pembuatan/pengelolaan user langsung dari UI Admin:
    ```bash
-   npm run dev
-   ```
-3. Jalankan pemeriksaan kualitas kode & pengujian:
-   ```bash
-   npm run lint
-   npm test
-   npm run build
+   supabase functions deploy username-login
+   supabase functions deploy admin-users
    ```
 
-## Penyimpanan Data & Integrasi Google Sheets
+## 3. Struktur Role & Hak Akses
 
-Saat ini penyimpanan data dilakukan secara lokal di browser menggunakan state React dan `localStorage` (`perlap_items_v1` & `perlap_timeline_v1`).
+| Role | Hak Akses |
+| :--- | :--- |
+| **`admin` (Admin Utama)** | Melihat pengajuan semua divisi, CRUD semua pengajuan, mengelola akun & role/divisi pengguna, mengelola timeline kerja, dan ekspor Excel/CSV. |
+| **`admin_divisi` (Admin Divisi)** | Melihat, menambah, mengedit, menghapus, dan mengekspor pengajuan **hanya pada divisinya sendiri**, serta memantau timeline kerja. |
+| **`user` (User Divisi)** | Membuat pengajuan barang **hanya untuk divisinya sendiri** dan melihat rekap pengajuan divisinya secara *read-only*. |
 
-Untuk mengekspor data ke Google Sheets atau Microsoft Excel:
-- Gunakan tombol **Unduh CSV / Excel** pada halaman **Rekap Per Divisi**.
-- Gunakan tombol **Salin ke Spreadsheet** untuk menyalin format TSV dan menempelkannya (`Ctrl+V`) langsung ke Google Sheets.
+## 4. Menjalankan Project Secara Lokal
 
-### Panduan Integrasi Otomatis ke Google Sheets
-Jika ingin menghubungkan pengiriman form secara langsung ke Google Sheets tanpa menyimpan kredensial di frontend:
-1. Buat **Google Apps Script** pada Google Spreadsheet tujuan dengan fungsi `doPost(e)` yang menerima payload JSON dan memisahkan baris ke sheet `Form Responses` serta sheet masing-masing divisi.
-2. Deploy sebagai **Web App** atau gunakan backend perantara (proxy API) yang menyimpan kredensial service account di sisi server.
-3. Panggil endpoint backend / Web App URL tersebut melalui variabel environment server pada saat `handleSubmitItems` dijalankan.
+```bash
+npm install
+npm run dev
+npm run lint
+npm test
+npm run build
+```
