@@ -16,7 +16,7 @@ export default function SummaryCards({ filteredItems, activeDivisiTab }) {
 
   const activeScopeLabel =
     activeDivisiTab === 'ALL'
-      ? 'Semua Divisi (Form Responses)'
+      ? 'Semua Divisi'
       : `Sheet: Rekap - ${activeDivisiTab}`;
 
   const cards = [

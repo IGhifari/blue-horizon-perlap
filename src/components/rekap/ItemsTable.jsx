@@ -32,7 +32,7 @@ export default function ItemsTable({
             </th>
             {isAdmin && (
               <th className="py-3.5 px-3.5 font-extrabold text-center">
-                Aksi (Admin CRUD)
+                Aksi
               </th>
             )}
           </tr>

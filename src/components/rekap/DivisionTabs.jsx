@@ -19,7 +19,7 @@ export default function DivisionTabs({
 
   const tabs = showAllTabs
     ? [
-        { id: 'ALL', label: 'Semua (Form Responses)' },
+        { id: 'ALL', label: 'Semua Data' },
         ...DIVISIONS.map((div) => ({ id: div, label: `Rekap - ${div}` })),
       ]
     : profile?.divisi

@@ -431,8 +431,8 @@ export async function buildPortalWorkbook({
   const wsSemuaData = wb.addWorksheet('Semua Data');
   formatItemsSheet(wsSemuaData, {
     title: isAdmin
-      ? 'DATA TANGGAPAN FORMULIR (SEMUA DATA) – SELURUH DIVISI'
-      : `DATA TANGGAPAN FORMULIR (SEMUA DATA) – DIVISI ${String(profile?.divisi || '').toUpperCase()}`,
+      ? 'REKAP & PENGADAAN BARANG (SEMUA DATA) – SELURUH DIVISI'
+      : `REKAP & PENGADAAN BARANG (SEMUA DATA) – DIVISI ${String(profile?.divisi || '').toUpperCase()}`,
     instruction: `Cara Penggunaan: Lembar ini memuat seluruh data permintaan barang yang dapat diakses. Ringkasan: ${items.length} permintaan (${totalQty} unit barang).`,
     rows: items,
     isAllData: true,
@@ -582,7 +582,7 @@ export function exportItemsToCsv(rows, activeDivisiTab = 'ALL') {
   const link = document.createElement('a');
   const scopeName =
     activeDivisiTab === 'ALL'
-      ? 'Form_Responses_Semua_Divisi'
+      ? 'Semua_Data_Divisi'
       : `Rekap_${activeDivisiTab}`;
 
   link.href = url;
