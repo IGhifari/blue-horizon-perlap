@@ -3,6 +3,7 @@ import { X, Save } from 'lucide-react';
 import {
   DIVISIONS,
   CATEGORIES,
+  getTodayDateString,
 } from '../../data/initialData';
 import {
   isMainAdmin,
@@ -27,7 +28,7 @@ export default function EditItemModal({ item, profile, onClose, onSave }) {
     jikaMenyewa: '',
     jikaMeminjam: '',
     catatanOpsional: '',
-    tanggalPermintaan: '2026-10-26',
+    tanggalPermintaan: getTodayDateString(),
   });
   const [error, setError] = useState('');
 
@@ -47,7 +48,7 @@ export default function EditItemModal({ item, profile, onClose, onSave }) {
         jikaMeminjam: item.jikaMeminjam === '-' ? '' : item.jikaMeminjam || '',
         catatanOpsional:
           item.catatanOpsional === '-' ? '' : item.catatanOpsional || '',
-        tanggalPermintaan: item.tanggalPermintaan || '2026-10-26',
+        tanggalPermintaan: item.tanggalPermintaan || getTodayDateString(),
       });
     }
   }, [item, canChooseDivision, profile?.divisi]);
@@ -92,7 +93,7 @@ export default function EditItemModal({ item, profile, onClose, onSave }) {
       jikaMenyewa: formData.jikaMenyewa.trim() || '-',
       jikaMeminjam: formData.jikaMeminjam.trim() || '-',
       catatanOpsional: formData.catatanOpsional.trim() || '-',
-      tanggalPermintaan: formData.tanggalPermintaan || '2026-10-26',
+      tanggalPermintaan: formData.tanggalPermintaan || getTodayDateString(),
     });
   };
 

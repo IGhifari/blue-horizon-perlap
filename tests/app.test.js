@@ -6,6 +6,7 @@ import {
   DIVISIONS,
   CATEGORIES,
   createEmptyDraftRow,
+  getTodayDateString,
 } from '../src/data/initialData.js';
 import {
   filterItems,
@@ -80,6 +81,14 @@ test('createEmptyDraftRow menghasilkan baris draft dengan default yang valid', (
   assert.equal(row.namaBarang, '');
   assert.equal(row.jumlahBarang, 1);
   assert.equal(row.kategori, 'Pinjam');
+});
+
+test('getTodayDateString menghasilkan tanggal hari ini dengan format YYYY-MM-DD', () => {
+  const today = getTodayDateString();
+  assert.match(today, /^\d{4}-\d{2}-\d{2}$/);
+
+  const fixedDate = new Date(2026, 9, 28);
+  assert.equal(getTodayDateString(fixedDate), '2026-10-28');
 });
 
 test('Skenario 1: Admin utama dapat melihat, mengubah, menghapus data semua divisi serta mengelola akun & timeline', () => {

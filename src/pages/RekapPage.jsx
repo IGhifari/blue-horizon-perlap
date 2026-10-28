@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
-import { CATEGORIES } from '../data/initialData';
+import { CATEGORIES, getTodayDateString } from '../data/initialData';
 import {
   isMainAdmin,
   canManageDivisionItems,
@@ -112,7 +112,7 @@ export default function RekapPage({
               jikaMenyewa: '',
               jikaMeminjam: '',
               catatanOpsional: '',
-              tanggalPermintaan: '2026-10-26',
+              tanggalPermintaan: getTodayDateString(),
             })
           }
         />

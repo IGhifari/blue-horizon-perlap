@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Plus, RotateCcw, Send } from 'lucide-react';
-import { DIVISIONS, createEmptyDraftRow } from '../../data/initialData';
+import {
+  DIVISIONS,
+  createEmptyDraftRow,
+  getTodayDateString,
+} from '../../data/initialData';
 import {
   isMainAdmin,
   getAllowedDivisions,
@@ -21,7 +25,7 @@ export default function RequestForm({ profile, onSubmitItems, onNotify }) {
     : profile?.divisi || allowedDivisions[0] || 'Acara';
 
   const [divisi, setDivisi] = useState(defaultDivision);
-  const [tanggalPermintaan, setTanggalPermintaan] = useState('2026-10-26');
+  const [tanggalPermintaan, setTanggalPermintaan] = useState(getTodayDateString);
   const [draftRows, setDraftRows] = useState(() => [createEmptyDraftRow()]);
   const [errors, setErrors] = useState({});
 
@@ -70,6 +74,7 @@ export default function RequestForm({ profile, onSubmitItems, onNotify }) {
 
   const handleReset = () => {
     setDraftRows([createEmptyDraftRow()]);
+    setTanggalPermintaan(getTodayDateString());
     setErrors({});
     onNotify('Formulir telah direset.', 'success');
   };
@@ -118,11 +123,12 @@ export default function RequestForm({ profile, onSubmitItems, onNotify }) {
 
     onSubmitItems({
       divisi: effectiveDivisi,
-      tanggalPermintaan: tanggalPermintaan || '2026-10-26',
+      tanggalPermintaan: tanggalPermintaan || getTodayDateString(),
       rows: validRows,
     });
 
     setDraftRows([createEmptyDraftRow()]);
+    setTanggalPermintaan(getTodayDateString());
     setErrors({});
   };
 
