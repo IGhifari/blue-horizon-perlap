@@ -7,8 +7,15 @@ import {
   resolveEffectiveDivisionForCreate,
   canEditItem,
   canDeleteItem,
+  canManagePhotos,
   filterItemsByProfileAccess,
 } from './features/auth/permissions';
+import {
+  normalizePhotoList,
+  getFallbackPhotosForItem,
+  saveFallbackPhotosForItem,
+  removeFallbackPhotosForItem,
+} from './utils/photoUtils';
 import Header from './components/layout/Header';
 import Toast from './components/ui/Toast';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -34,13 +41,19 @@ function clearLegacyLocalStorage() {
   }
 }
 
-const toDbItem = (item) => {
+function isMissingFotoBuktiColumnError(error) {
+  if (!error) return false;
+  const msg = String(error.message || error.details || '').toLowerCase();
+  return msg.includes('foto_bukti');
+}
+
+const toDbItem = (item, { includeFotoBukti = true } = {}) => {
   const rawNote = String(item.catatanOpsional ?? '')
     .replace(/\[PERLAP:SUDAH_ADA\]\s*/g, '')
     .trim();
   const cleanNote = rawNote || '-';
 
-  return {
+  const payload = {
     divisi: item.divisi,
     nama_barang: item.namaBarang,
     jumlah_barang: Number(item.jumlahBarang) || 1,
@@ -51,6 +64,12 @@ const toDbItem = (item) => {
     catatan_opsional: cleanNote,
     tanggal_permintaan: item.tanggalPermintaan,
   };
+
+  if (includeFotoBukti && item.fotoBukti !== undefined) {
+    payload.foto_bukti = normalizePhotoList(item.fotoBukti);
+  }
+
+  return payload;
 };
 
 const fromDbItem = (item) => {
@@ -58,6 +77,10 @@ const fromDbItem = (item) => {
   const cleanCatatan = rawCatatan
     .replace(/\[PERLAP:SUDAH_ADA\]\s*/g, '')
     .trim();
+
+  const dbPhotos = normalizePhotoList(item.foto_bukti ?? item.fotoBukti);
+  const fallbackPhotos =
+    dbPhotos.length > 0 ? dbPhotos : getFallbackPhotosForItem(item.id);
 
   return {
     id: item.id,
@@ -70,6 +93,7 @@ const fromDbItem = (item) => {
     jikaMeminjam: item.jika_meminjam || '-',
     catatanOpsional: cleanCatatan || '-',
     tanggalPermintaan: item.tanggal_permintaan,
+    fotoBukti: fallbackPhotos,
   };
 };
 
@@ -296,7 +320,8 @@ function AuthenticatedPortal() {
       }
     }
 
-    const dbPayload = toDbItem(payload);
+    const canUpload = canManagePhotos(profile);
+    const dbPayload = toDbItem(payload, { includeFotoBukti: canUpload });
     let result;
 
     if (payload.id) {
@@ -306,12 +331,29 @@ function AuthenticatedPortal() {
         .eq('id', payload.id)
         .select('*')
         .single();
+
+      if (result.error && isMissingFotoBuktiColumnError(result.error)) {
+        result = await supabase
+          .from('requests')
+          .update(toDbItem(payload, { includeFotoBukti: false }))
+          .eq('id', payload.id)
+          .select('*')
+          .single();
+      }
     } else {
       result = await supabase
         .from('requests')
         .insert(dbPayload)
         .select('*')
         .single();
+
+      if (result.error && isMissingFotoBuktiColumnError(result.error)) {
+        result = await supabase
+          .from('requests')
+          .insert(toDbItem(payload, { includeFotoBukti: false }))
+          .select('*')
+          .single();
+      }
     }
 
     if (result.error) {
@@ -319,7 +361,16 @@ function AuthenticatedPortal() {
       return;
     }
 
-    const savedItem = fromDbItem(result.data);
+    if (canUpload && payload.fotoBukti !== undefined) {
+      saveFallbackPhotosForItem(result.data.id, payload.fotoBukti);
+    }
+
+    const savedItem = fromDbItem({
+      ...result.data,
+      foto_bukti:
+        result.data.foto_bukti ??
+        (canUpload ? normalizePhotoList(payload.fotoBukti) : undefined),
+    });
 
     setItems((prev) =>
       payload.id
@@ -328,6 +379,40 @@ function AuthenticatedPortal() {
     );
 
     notify('Data barang berhasil disimpan!');
+  };
+
+  // Perbarui foto bukti transaksi langsung dari tabel / lightbox (Khusus Admin Utama)
+  const handleUpdateItemPhotos = async (itemId, nextPhotos) => {
+    if (!canManagePhotos(profile)) {
+      notify(
+        'Akses ditolak: Hanya Admin Utama (Divisi Perlengkapan) yang dapat mengelola foto bukti transaksi.',
+        'error'
+      );
+      return;
+    }
+
+    const normalized = normalizePhotoList(nextPhotos);
+    const { error } = await supabase
+      .from('requests')
+      .update({ foto_bukti: normalized })
+      .eq('id', itemId)
+      .select('*')
+      .single();
+
+    if (error && !isMissingFotoBuktiColumnError(error)) {
+      notify(`Gagal menyimpan foto bukti: ${error.message}`, 'error');
+      return;
+    }
+
+    saveFallbackPhotosForItem(itemId, normalized);
+
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId ? { ...item, fotoBukti: normalized } : item
+      )
+    );
+
+    notify('Foto bukti transaksi berhasil diperbarui!');
   };
 
   // Hapus barang dari database Supabase
@@ -351,6 +436,7 @@ function AuthenticatedPortal() {
       return;
     }
 
+    removeFallbackPhotosForItem(id);
     setItems((prev) => prev.filter((item) => item.id !== id));
     notify('Data barang berhasil dihapus.');
   };
@@ -445,6 +531,7 @@ function AuthenticatedPortal() {
                 activeDivisiTab={activeDivisiTab}
                 onSelectDivisi={setActiveDivisiTab}
                 onSaveCrudItem={handleSaveCrudItem}
+                onUpdateItemPhotos={handleUpdateItemPhotos}
                 onDeleteItem={handleDeleteItem}
                 onNotify={notify}
               />

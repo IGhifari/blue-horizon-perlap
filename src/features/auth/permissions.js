@@ -77,6 +77,10 @@ export function canManageTimeline(profile) {
   return isMainAdmin(profile);
 }
 
+export function canManagePhotos(profile) {
+  return isMainAdmin(profile);
+}
+
 export function canViewAllDivisions(profile) {
   return isMainAdmin(profile);
 }
@@ -128,6 +132,13 @@ export function canEditItem(profile, existingItem, updatedFields = {}) {
     return true;
   }
   if (isDivisionAdmin(profile)) {
+    if (updatedFields.fotoBukti !== undefined) {
+      const prevPhotos = JSON.stringify(existingItem.fotoBukti || []);
+      const nextPhotos = JSON.stringify(updatedFields.fotoBukti || []);
+      if (prevPhotos !== nextPhotos) {
+        return false;
+      }
+    }
     const oldMatches = isSameDivisi(existingItem.divisi, profile.divisi);
     const newDivisi = updatedFields.divisi ?? existingItem.divisi;
     const newMatches = isSameDivisi(newDivisi, profile.divisi);

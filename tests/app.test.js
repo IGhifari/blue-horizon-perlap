@@ -23,11 +23,19 @@ import {
   canDeleteItem,
   canManageUsers,
   canManageTimeline,
+  canManagePhotos,
   canUpdateProfileRoleOrDivisi,
   resolveEffectiveDivisionForCreate,
   filterItemsByProfileAccess,
   usernameToInternalEmail,
 } from '../src/features/auth/permissions.js';
+import {
+  validateImageFile,
+  normalizePhotoList,
+  uploadPhotoFile,
+  removePhotoFromStorage,
+  MAX_FILE_SIZE_BYTES,
+} from '../src/utils/photoUtils.js';
 
 const PROFILE_MAIN_ADMIN = {
   id: 'uuid-admin-1',
@@ -357,3 +365,128 @@ test('Validasi konfigurasi Supabase menyebutkan nama variabel yang belum tersedi
   });
   assert.equal(res2.url, 'https://test.supabase.co');
 });
+
+test('Hak akses foto bukti transaksi hanya diizinkan untuk Admin Utama (Divisi Perlengkapan)', () => {
+  assert.equal(canManagePhotos(PROFILE_MAIN_ADMIN), true);
+  assert.equal(canManagePhotos(PROFILE_ADMIN_ACARA), false);
+  assert.equal(canManagePhotos(PROFILE_USER_ACARA), false);
+  assert.equal(canManagePhotos(null), false);
+
+  const itemAcara = {
+    ...INITIAL_ITEMS.find((i) => i.divisi === 'Acara'),
+    fotoBukti: [{ id: 'p-1', name: 'struk.jpg', url: 'https://example.com/struk.jpg' }],
+  };
+
+  // Admin Divisi boleh mengedit detail barang divisinya selama tidak mengubah fotoBukti
+  assert.equal(
+    canEditItem(PROFILE_ADMIN_ACARA, itemAcara, {
+      divisi: 'Acara',
+      fotoBukti: itemAcara.fotoBukti,
+    }),
+    true
+  );
+
+  // Admin Divisi ditolak jika mencoba mengubah atau menghapus fotoBukti
+  assert.equal(
+    canEditItem(PROFILE_ADMIN_ACARA, itemAcara, {
+      divisi: 'Acara',
+      fotoBukti: [],
+    }),
+    false
+  );
+});
+
+test('Validasi dan normalisasi multi-foto bukti transaksi berfungsi dengan benar', () => {
+  assert.equal(
+    validateImageFile({ name: 'struk.jpg', type: 'image/jpeg', size: 1024 * 500 }).valid,
+    true
+  );
+  assert.equal(
+    validateImageFile({ name: 'nota.png', type: 'image/png', size: 1024 * 200 }).valid,
+    true
+  );
+  assert.equal(
+    validateImageFile({ name: 'dokumen.pdf', type: 'application/pdf', size: 1024 }).valid,
+    false
+  );
+  assert.equal(
+    validateImageFile({
+      name: 'besar.jpg',
+      type: 'image/jpeg',
+      size: MAX_FILE_SIZE_BYTES + 100,
+    }).valid,
+    false
+  );
+
+  const normalized = normalizePhotoList([
+    {
+      id: 'photo-1',
+      name: 'struk-1.jpg',
+      url: 'https://cdn.example.com/struk-1.jpg',
+      caption: 'Struk Pembelian Kabel Roll',
+    },
+    'https://cdn.example.com/struk-2.png',
+  ]);
+  assert.equal(normalized.length, 2);
+  assert.equal(normalized[0].caption, 'Struk Pembelian Kabel Roll');
+  assert.equal(normalized[1].url, 'https://cdn.example.com/struk-2.png');
+});
+
+test('Upload dan hapus foto bukti transaksi mendukung Supabase Storage & menolak non-Admin Utama', async () => {
+  const dummyFile = {
+    name: 'struk-tokopedia.jpg',
+    type: 'image/jpeg',
+    size: 2048,
+    dataUrl: 'data:image/jpeg;base64,dGVzdA==',
+  };
+
+  // Non-admin harus ditolak ketika mencoba upload
+  await assert.rejects(
+    () =>
+      uploadPhotoFile(dummyFile, {
+        itemId: 'item-1',
+        divisi: 'Acara',
+        profile: PROFILE_ADMIN_ACARA,
+      }),
+    /Hanya Admin Utama/
+  );
+
+  // Mock Supabase Storage berhasil
+  let removedPaths = [];
+  const mockSupabaseStorage = {
+    storage: {
+      from: () => ({
+        upload: async () => ({ data: { path: 'mock/path' }, error: null }),
+        getPublicUrl: (path) => ({
+          data: { publicUrl: `https://test.supabase.co/storage/v1/object/public/bukti-transaksi/${path}` },
+        }),
+        remove: async (paths) => {
+          removedPaths = paths;
+          return { data: paths, error: null };
+        },
+      }),
+    },
+  };
+
+  const uploaded = await uploadPhotoFile(dummyFile, {
+    itemId: 'item-1',
+    divisi: 'Perlengkapan',
+    profile: PROFILE_MAIN_ADMIN,
+    supabaseClient: mockSupabaseStorage,
+    caption: 'Struk Pembelian Rp 250.000',
+  });
+
+  assert.ok(uploaded.id.startsWith('photo-'));
+  assert.equal(uploaded.name, 'struk-tokopedia.jpg');
+  assert.equal(uploaded.caption, 'Struk Pembelian Rp 250.000');
+  assert.equal(uploaded.uploadedBy, 'admin_utama');
+  assert.ok(uploaded.url.includes('bukti-transaksi/perlengkapan/item-1/'));
+  assert.ok(uploaded.storagePath);
+
+  await removePhotoFromStorage(uploaded, {
+    profile: PROFILE_MAIN_ADMIN,
+    supabaseClient: mockSupabaseStorage,
+  });
+  assert.deepEqual(removedPaths, [uploaded.storagePath]);
+});
+

@@ -1,4 +1,5 @@
-import { Package, Layers, Handshake, ShoppingBag } from 'lucide-react';
+import { Package, Layers, Handshake, ShoppingBag, Camera } from 'lucide-react';
+import { normalizePhotoList } from '../../utils/photoUtils';
 import Card from '../ui/Card';
 
 export default function SummaryCards({ filteredItems, activeDivisiTab }) {
@@ -13,6 +14,13 @@ export default function SummaryCards({ filteredItems, activeDivisiTab }) {
   const beliCount = filteredItems.filter(
     (i) => i.kategori === 'Beli'
   ).length;
+  const documentedItemsCount = filteredItems.filter(
+    (i) => normalizePhotoList(i.fotoBukti).length > 0
+  ).length;
+  const totalPhotosCount = filteredItems.reduce(
+    (acc, cur) => acc + normalizePhotoList(cur.fotoBukti).length,
+    0
+  );
 
   const activeScopeLabel =
     activeDivisiTab === 'ALL'
@@ -48,10 +56,17 @@ export default function SummaryCards({ filteredItems, activeDivisiTab }) {
       variant: 'mint',
       icon: ShoppingBag,
     },
+    {
+      title: 'Bukti Foto / Struk',
+      value: `${totalPhotosCount} Foto`,
+      subtitle: `${documentedItemsCount} barang terdokumentasi`,
+      variant: 'cream',
+      icon: Camera,
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {cards.map((c) => {
         const Icon = c.icon;
         return (

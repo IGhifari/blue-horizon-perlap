@@ -6,6 +6,7 @@ import {
   filterItemsByProfileAccess,
   matchCanonicalDivision,
 } from '../features/auth/permissions.js';
+import { normalizePhotoList } from './photoUtils.js';
 
 let cachedExcelJS = null;
 
@@ -81,6 +82,7 @@ export function normalizeItem(item) {
     jikaMeminjam: (item.jikaMeminjam ?? item.jika_meminjam) || '-',
     catatanOpsional: rawNote || '-',
     tanggalPermintaan: (item.tanggalPermintaan ?? item.tanggal_permintaan) || '-',
+    fotoBukti: normalizePhotoList(item.fotoBukti ?? item.foto_bukti),
   };
 }
 
@@ -638,6 +640,9 @@ export function filterItems(
       activeDivisiTab === 'ALL' || item.divisi === activeDivisiTab;
     const matchKat =
       categoryFilter === 'ALL' || item.kategori === categoryFilter;
+    const photoText = normalizePhotoList(item.fotoBukti)
+      .map((p) => `${p.name} ${p.caption}`)
+      .join(' ');
     const matchQuery =
       !query ||
       [
@@ -647,6 +652,7 @@ export function filterItems(
         item.jikaMenyewa,
         item.jikaMeminjam,
         item.catatanOpsional,
+        photoText,
       ].some((val) => String(val || '').toLowerCase().includes(query));
 
     return matchDivisi && matchKat && matchQuery;
