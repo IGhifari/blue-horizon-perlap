@@ -109,7 +109,7 @@ export function getExportFileName(customDate = null) {
   return `Portal-Logistik-${year}-${month}-${day}.xlsx`;
 }
 
-function formatItemsSheet(ws, { title, instruction, rows = [], isAllData = false, divisiName = '' }) {
+function formatItemsSheet(ws, { rows = [], isAllData = false, divisiName = '' }) {
   ws.columns = [
     { key: 'divisi', width: 18 },
     { key: 'namaBarang', width: 34 },
@@ -122,34 +122,11 @@ function formatItemsSheet(ws, { title, instruction, rows = [], isAllData = false
     { key: 'tanggalPermintaan', width: 20 },
   ];
 
-  // Bekukan baris header (baris 4) agar tetap terlihat ketika scrolling
-  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 4, activeCell: 'A5' }];
+  // Bekukan baris header kolom (baris 1) agar tetap terlihat ketika scrolling
+  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1, activeCell: 'A2' }];
 
-  // Baris 1: Judul Utama
-  ws.mergeCells('A1:I1');
-  const titleRow = ws.getRow(1);
-  titleRow.height = 32;
-  const titleCell = ws.getCell('A1');
-  titleCell.value = title;
-  titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.headerFill } };
-  titleCell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: COLORS.headerText } };
-  titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-
-  // Baris 2: Petunjuk Penggunaan
-  ws.mergeCells('A2:I2');
-  const instRow = ws.getRow(2);
-  instRow.height = 25;
-  const instCell = ws.getCell('A2');
-  instCell.value = instruction;
-  instCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.instructionFill } };
-  instCell.font = { name: 'Calibri', size: 10, color: { argb: COLORS.instructionText } };
-  instCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1, wrapText: true };
-
-  // Baris 3: Pemisah kosong
-  ws.getRow(3).height = 10;
-
-  // Baris 4: Header Kolom
-  const headerRow = ws.getRow(4);
+  // Baris 1: Header Kolom Langsung di Baris Paling Atas
+  const headerRow = ws.getRow(1);
   headerRow.height = 28;
   EXPORT_HEADERS.forEach((h, idx) => {
     const cell = headerRow.getCell(idx + 1);
@@ -167,11 +144,11 @@ function formatItemsSheet(ws, { title, instruction, rows = [], isAllData = false
     };
   });
 
-  // Aktifkan Filter pada Baris Header Tabel
-  ws.autoFilter = 'A4:I4';
+  // Aktifkan Filter pada Baris Header Tabel (Baris 1)
+  ws.autoFilter = 'A1:I1';
 
-  // Baris 5+: Data Pengajuan
-  let currentRowIndex = 5;
+  // Baris 2+: Data Pengajuan
+  let currentRowIndex = 2;
   rows.forEach((item) => {
     const row = ws.getRow(currentRowIndex);
     row.height = 22;
@@ -215,7 +192,7 @@ function formatItemsSheet(ws, { title, instruction, rows = [], isAllData = false
   const summaryValues = [
     isAllData ? 'TOTAL KESELURUHAN' : `TOTAL REKAP ${divisiName ? divisiName.toUpperCase() : ''}`.trim(),
     `${rows.length} Permintaan`,
-    rows.length > 0 ? { formula: `SUM(C5:C${lastDataRow})`, result: totalQtyCalc } : 0,
+    rows.length > 0 ? { formula: `SUM(C2:C${lastDataRow})`, result: totalQtyCalc } : 0,
     '',
     '',
     '',
@@ -255,8 +232,8 @@ function formatTimelineSheet(ws, timeline = []) {
     { key: 'catatan', width: 26 },
   ];
 
-  // Bekukan baris header timeline (baris 7)
-  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 7, activeCell: 'A8' }];
+  // Bekukan baris header timeline (baris 6)
+  ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 6, activeCell: 'A7' }];
 
   // Baris 1: Judul Utama
   ws.mergeCells('A1:H1');
@@ -268,19 +245,8 @@ function formatTimelineSheet(ws, timeline = []) {
   titleCell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: COLORS.headerText } };
   titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
 
-  // Baris 2: Petunjuk
-  ws.mergeCells('A2:H2');
-  const instRow = ws.getRow(2);
-  instRow.height = 25;
-  const instCell = ws.getCell('A2');
-  instCell.value =
-    'Cara Penggunaan: Pantau tahapan kerja, hasil akhir, status pengerjaan, dan progres kegiatan logistik perlengkapan.';
-  instCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.instructionFill } };
-  instCell.font = { name: 'Calibri', size: 10, color: { argb: COLORS.instructionText } };
-  instCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1, wrapText: true };
-
-  // Baris 3: Pemisah kosong
-  ws.getRow(3).height = 10;
+  // Baris 2: Pemisah kosong
+  ws.getRow(2).height = 10;
 
   // Perhitungan Metrik KPI
   const totalSteps = timeline.length;
@@ -293,18 +259,18 @@ function formatTimelineSheet(ws, timeline = []) {
         )
       : 0;
 
-  // Baris 4: Header Kartu KPI
-  ws.mergeCells('A4:B4');
-  ws.mergeCells('C4:D4');
-  ws.mergeCells('E4:F4');
-  ws.mergeCells('G4:H4');
-  ws.getRow(4).height = 18;
+  // Baris 3: Header Kartu KPI
+  ws.mergeCells('A3:B3');
+  ws.mergeCells('C3:D3');
+  ws.mergeCells('E3:F3');
+  ws.mergeCells('G3:H3');
+  ws.getRow(3).height = 18;
 
   const kpiHeaders = [
-    { cell: 'A4', label: 'Total Tahapan Kerja', fill: 'FFF1F5F9', color: 'FF1E3A5F' },
-    { cell: 'C4', label: 'Tahapan Selesai', fill: 'FFEBF4FF', color: 'FF1E3A5F' },
-    { cell: 'E4', label: 'Sedang Berjalan', fill: 'FFFFF3CD', color: 'FF856404' },
-    { cell: 'G4', label: 'Rata-rata Progres', fill: 'FFD1E7DD', color: 'FF0F5132' },
+    { cell: 'A3', label: 'Total Tahapan Kerja', fill: 'FFF1F5F9', color: 'FF1E3A5F' },
+    { cell: 'C3', label: 'Tahapan Selesai', fill: 'FFEBF4FF', color: 'FF1E3A5F' },
+    { cell: 'E3', label: 'Sedang Berjalan', fill: 'FFFFF3CD', color: 'FF856404' },
+    { cell: 'G3', label: 'Rata-rata Progres', fill: 'FFD1E7DD', color: 'FF0F5132' },
   ];
 
   kpiHeaders.forEach((kpi) => {
@@ -316,18 +282,18 @@ function formatTimelineSheet(ws, timeline = []) {
     c.border = BORDERS.thin;
   });
 
-  // Baris 5: Nilai Kartu KPI
-  ws.mergeCells('A5:B5');
-  ws.mergeCells('C5:D5');
-  ws.mergeCells('E5:F5');
-  ws.mergeCells('G5:H5');
-  ws.getRow(5).height = 26;
+  // Baris 4: Nilai Kartu KPI
+  ws.mergeCells('A4:B4');
+  ws.mergeCells('C4:D4');
+  ws.mergeCells('E4:F4');
+  ws.mergeCells('G4:H4');
+  ws.getRow(4).height = 26;
 
   const kpiValues = [
-    { cell: 'A5', val: totalSteps, fill: 'FFF1F5F9', color: 'FF1E3A5F' },
-    { cell: 'C5', val: completedSteps, fill: 'FFEBF4FF', color: 'FF1E3A5F' },
-    { cell: 'E5', val: inProgressSteps, fill: 'FFFFF3CD', color: 'FF856404' },
-    { cell: 'G5', val: `${avgProgress}%`, fill: 'FFD1E7DD', color: 'FF0F5132' },
+    { cell: 'A4', val: totalSteps, fill: 'FFF1F5F9', color: 'FF1E3A5F' },
+    { cell: 'C4', val: completedSteps, fill: 'FFEBF4FF', color: 'FF1E3A5F' },
+    { cell: 'E4', val: inProgressSteps, fill: 'FFFFF3CD', color: 'FF856404' },
+    { cell: 'G4', val: `${avgProgress}%`, fill: 'FFD1E7DD', color: 'FF0F5132' },
   ];
 
   kpiValues.forEach((kpi) => {
@@ -339,11 +305,11 @@ function formatTimelineSheet(ws, timeline = []) {
     c.border = BORDERS.thin;
   });
 
-  // Baris 6: Pemisah kosong
-  ws.getRow(6).height = 10;
+  // Baris 5: Pemisah kosong
+  ws.getRow(5).height = 10;
 
-  // Baris 7: Header Tabel Timeline
-  const headerRow = ws.getRow(7);
+  // Baris 6: Header Tabel Timeline
+  const headerRow = ws.getRow(6);
   headerRow.height = 28;
   const headers = [
     'No',
@@ -373,10 +339,10 @@ function formatTimelineSheet(ws, timeline = []) {
   });
 
   // Aktifkan AutoFilter pada Header Timeline
-  ws.autoFilter = 'A7:H7';
+  ws.autoFilter = 'A6:H6';
 
-  // Baris 8+: Data Timeline
-  let currentRowIndex = 8;
+  // Baris 7+: Data Timeline
+  let currentRowIndex = 7;
   timeline.forEach((item, index) => {
     const row = ws.getRow(currentRowIndex);
     row.height = 22;
@@ -422,47 +388,58 @@ export async function buildPortalWorkbook({
   const isAdmin = isMainAdmin(profile);
   const allowedDivisions = getAllowedDivisions(profile, DIVISIONS);
 
-  // 1. Sheet Timeline Perlengkapan (jika data timeline tersedia)
-  if (timeline && timeline.length > 0) {
-    const wsTimeline = wb.addWorksheet('Timeline Perlengkapan');
-    formatTimelineSheet(wsTimeline, timeline);
-  }
+  if (isAdmin) {
+    // 1. Sheet Timeline Perlengkapan (jika data timeline tersedia, eksklusif Admin Utama)
+    if (timeline && timeline.length > 0) {
+      const wsTimeline = wb.addWorksheet('Timeline Perlengkapan');
+      formatTimelineSheet(wsTimeline, timeline);
+    }
 
-  // 2. Sheet Semua Data (berisi seluruh data yang boleh diakses pengguna login)
-  const totalQty = items.reduce((s, r) => s + (Number(r.jumlahBarang) || 0), 0);
-  const wsSemuaData = wb.addWorksheet('Semua Data');
-  formatItemsSheet(wsSemuaData, {
-    title: isAdmin
-      ? 'REKAP & PENGADAAN BARANG (SEMUA DATA) – SELURUH DIVISI'
-      : `REKAP & PENGADAAN BARANG (SEMUA DATA) – DIVISI ${String(profile?.divisi || '').toUpperCase()}`,
-    instruction: `Cara Penggunaan: Lembar ini memuat seluruh data permintaan barang yang dapat diakses. Ringkasan: ${items.length} permintaan (${totalQty} unit barang).`,
-    rows: items,
-    isAllData: true,
-  });
-
-  // 3-7. Sheet Rekap Per Divisi
-  // Untuk Admin: urutan sesuai spesifikasi ['Acara', 'Perlengkapan', 'Humreg', 'Dekdok', 'Keamanan']
-  // Untuk Admin Divisi: hanya divisi miliknya sendiri, jangan bocorkan divisi lain
-  const allowedSet = new Set(allowedDivisions.map((d) => d.toLowerCase()));
-  const targetDivisions = ORDERED_DIVISION_SHEETS.filter((div) =>
-    allowedSet.has(div.toLowerCase())
-  );
-
-  targetDivisions.forEach((divisi) => {
-    const divRows = items.filter(
-      (item) => String(item.divisi || '').trim().toLowerCase() === divisi.toLowerCase()
-    );
-    const divQty = divRows.reduce((s, r) => s + (Number(r.jumlahBarang) || 0), 0);
-
-    const wsDiv = wb.addWorksheet(`Rekap - ${divisi}`);
-    formatItemsSheet(wsDiv, {
-      title: `REKAP & PENGADAAN BARANG – DIVISI ${divisi.toUpperCase()}`,
-      instruction: `Cara Penggunaan: Urutan kolom (A s/d I) sudah disamakan persis dengan Semua Data. Ringkasan divisi ${divisi}: ${divRows.length} permintaan (${divQty} unit barang).`,
-      rows: divRows,
-      isAllData: false,
-      divisiName: divisi,
+    // 2. Sheet Semua Data (eksklusif Admin Utama)
+    const wsSemuaData = wb.addWorksheet('Semua Data');
+    formatItemsSheet(wsSemuaData, {
+      rows: items,
+      isAllData: true,
     });
-  });
+
+    // 3-7. Sheet Rekap Per Divisi untuk seluruh divisi
+    const allowedSet = new Set(allowedDivisions.map((d) => d.toLowerCase()));
+    const targetDivisions = ORDERED_DIVISION_SHEETS.filter((div) =>
+      allowedSet.has(div.toLowerCase())
+    );
+
+    targetDivisions.forEach((divisi) => {
+      const divRows = items.filter(
+        (item) => String(item.divisi || '').trim().toLowerCase() === divisi.toLowerCase()
+      );
+
+      const wsDiv = wb.addWorksheet(`Rekap - ${divisi}`);
+      formatItemsSheet(wsDiv, {
+        rows: divRows,
+        isAllData: false,
+        divisiName: divisi,
+      });
+    });
+  } else {
+    // Role per divisi: sheetnya HANYA data per divisi saja.
+    // Sheet Timeline Perlengkapan dan Sheet Semua Data tidak disertakan.
+    const userDivision =
+      profile?.divisi || (allowedDivisions.length > 0 ? allowedDivisions[0] : null);
+    const targetDivisions = userDivision ? [userDivision] : allowedDivisions;
+
+    targetDivisions.forEach((divisi) => {
+      const divRows = items.filter(
+        (item) => String(item.divisi || '').trim().toLowerCase() === divisi.toLowerCase()
+      );
+
+      const wsDiv = wb.addWorksheet(`Rekap - ${divisi}`);
+      formatItemsSheet(wsDiv, {
+        rows: divRows,
+        isAllData: false,
+        divisiName: divisi,
+      });
+    });
+  }
 
   return wb;
 }
@@ -493,20 +470,28 @@ export async function exportPortalToExcel({
     }
     rawRequests = reqData;
 
-    const { data: tlData, error: tlError } = await client
-      .from('timeline_tasks')
-      .select('*')
-      .order('urutan');
-    if (tlError) {
-      console.warn('Gagal mengambil data timeline dari server:', tlError.message);
-      rawTimeline = fallbackTimeline && fallbackTimeline.length > 0 ? fallbackTimeline : INITIAL_TIMELINE;
+    // Timeline hanya diperlukan untuk role admin
+    if (profile?.role === ROLES.ADMIN) {
+      const { data: tlData, error: tlError } = await client
+        .from('timeline_tasks')
+        .select('*')
+        .order('urutan');
+      if (tlError) {
+        console.warn('Gagal mengambil data timeline dari server:', tlError.message);
+        rawTimeline = fallbackTimeline && fallbackTimeline.length > 0 ? fallbackTimeline : INITIAL_TIMELINE;
+      } else {
+        rawTimeline = tlData && tlData.length > 0 ? tlData : (fallbackTimeline.length > 0 ? fallbackTimeline : INITIAL_TIMELINE);
+      }
     } else {
-      rawTimeline = tlData && tlData.length > 0 ? tlData : (fallbackTimeline.length > 0 ? fallbackTimeline : INITIAL_TIMELINE);
+      rawTimeline = [];
     }
   }
 
   const itemsSource = rawRequests || fallbackItems || [];
-  const timelineSource = rawTimeline || fallbackTimeline || INITIAL_TIMELINE;
+  const timelineSource =
+    profile?.role === ROLES.ADMIN
+      ? (rawTimeline || fallbackTimeline || INITIAL_TIMELINE)
+      : [];
 
   const normalizedItems = itemsSource.map(normalizeItem);
   const normalizedTimeline = timelineSource.map(normalizeTimeline);

@@ -19,6 +19,7 @@ import {
   canManageTimeline,
   canViewAllDivisions,
   canManageDivisionItems,
+  canExportDivisionItems,
   getAllowedDivisions,
 } from './permissions';
 
@@ -152,6 +153,7 @@ export function AuthProvider({ children }) {
       canManageTimeline: canManageTimeline(profile),
       canViewAllDivisions: canViewAllDivisions(profile),
       canManageDivisionItems: canManageDivisionItems(profile),
+      canExportDivisionItems: canExportDivisionItems(profile),
       allowedDivisions: getAllowedDivisions(profile),
       login,
       logout,

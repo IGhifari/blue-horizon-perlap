@@ -86,6 +86,10 @@ export function canViewAllDivisions(profile) {
 }
 
 export function canManageDivisionItems(profile) {
+  return isMainAdmin(profile);
+}
+
+export function canExportDivisionItems(profile) {
   return isMainAdmin(profile) || isDivisionAdmin(profile);
 }
 
@@ -122,6 +126,7 @@ export function canCreateItem(profile, targetDivisi) {
 
 export function canEditItem(profile, existingItem, updatedFields = {}) {
   if (!profile || !existingItem) return false;
+  // Edit item hanya diizinkan untuk Admin Utama (Divisi Perlengkapan) di tab Semua Data
   if (isMainAdmin(profile)) {
     if (
       updatedFields.divisi &&
@@ -131,28 +136,15 @@ export function canEditItem(profile, existingItem, updatedFields = {}) {
     }
     return true;
   }
-  if (isDivisionAdmin(profile)) {
-    if (updatedFields.fotoBukti !== undefined) {
-      const prevPhotos = JSON.stringify(existingItem.fotoBukti || []);
-      const nextPhotos = JSON.stringify(updatedFields.fotoBukti || []);
-      if (prevPhotos !== nextPhotos) {
-        return false;
-      }
-    }
-    const oldMatches = isSameDivisi(existingItem.divisi, profile.divisi);
-    const newDivisi = updatedFields.divisi ?? existingItem.divisi;
-    const newMatches = isSameDivisi(newDivisi, profile.divisi);
-    return oldMatches && newMatches;
-  }
+  // Rekap per divisi bersifat read-only: Admin Divisi dan User tidak dapat mengubah data
   return false;
 }
 
 export function canDeleteItem(profile, existingItem) {
   if (!profile || !existingItem) return false;
+  // Hapus item hanya diizinkan untuk Admin Utama (Divisi Perlengkapan) di tab Semua Data
   if (isMainAdmin(profile)) return true;
-  if (isDivisionAdmin(profile)) {
-    return isSameDivisi(existingItem.divisi, profile.divisi);
-  }
+  // Rekap per divisi bersifat read-only: Admin Divisi dan User tidak dapat menghapus data
   return false;
 }
 

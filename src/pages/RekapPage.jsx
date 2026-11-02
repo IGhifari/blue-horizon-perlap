@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import { CATEGORIES, getTodayDateString } from '../data/initialData';
 import {
   isMainAdmin,
-  canManageDivisionItems,
+  canExportDivisionItems,
   canManagePhotos,
   filterItemsByProfileAccess,
 } from '../features/auth/permissions';
@@ -38,11 +38,16 @@ export default function RekapPage({
   const [isExporting, setIsExporting] = useState(false);
 
   const mainAdmin = isMainAdmin(profile);
-  const canEditItems = canManageDivisionItems(profile);
-  const canUploadPhotos = canManagePhotos(profile);
   const effectiveDivisiTab = mainAdmin
     ? activeDivisiTab
     : profile?.divisi || 'ALL';
+
+  // Rekap per divisi bersifat read-only.
+  // Hanya Admin Utama di tab Semua Data ('ALL') yang dapat menambah, mengedit, atau menghapus barang.
+  const isAllTab = effectiveDivisiTab === 'ALL';
+  const canEditItems = mainAdmin && isAllTab;
+  const canExport = canExportDivisionItems(profile);
+  const canUploadPhotos = canManagePhotos(profile) && isAllTab;
 
   const accessibleItems = useMemo(
     () => filterItemsByProfileAccess(items, profile),
@@ -67,7 +72,7 @@ export default function RekapPage({
   }, [accessibleItems, photoModalState]);
 
   const handleExportExcel = async () => {
-    if (!canEditItems || isExporting) return;
+    if (!canExport || isExporting) return;
     setIsExporting(true);
     try {
       await exportPortalToExcel({

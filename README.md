@@ -31,6 +31,7 @@ Variabel berikut otomatis disediakan oleh runtime Supabase Edge Functions di ser
 1. Buka **Supabase Dashboard → SQL Editor**, lalu jalankan isi file migrasi secara berurutan:
    - `supabase/migrations/20261026000001_rbac_rls_policies.sql`
    - `supabase/migrations/20261031000002_photo_receipts_support.sql` *(untuk dukungan kolom `foto_bukti` dan Storage Bucket `bukti-transaksi`)*
+   - `supabase/migrations/20261102000003_readonly_rekap_per_divisi.sql` *(proteksi read-only pada rekap per divisi)*
 2. Buat pengguna pertama di **Supabase Dashboard → Authentication → Users → Add User**:
    - Email: `admin_perlap@perlap.internal` (atau email pilihan Anda)
    - Password: `<password-kuat>`
@@ -55,9 +56,9 @@ Variabel berikut otomatis disediakan oleh runtime Supabase Edge Functions di ser
 
 | Role | Hak Akses |
 | :--- | :--- |
-| **`admin` (Admin Utama)** | Melihat pengajuan semua divisi, CRUD semua pengajuan, mengunggah & mengelola foto bukti transaksi/struk pengeluaran (multi-foto), mengelola akun & role/divisi pengguna, mengelola timeline kerja, dan ekspor Excel/CSV. |
-| **`admin_divisi` (Admin Divisi)** | Melihat, menambah, mengedit, menghapus, dan mengekspor pengajuan **hanya pada divisinya sendiri**, serta memantau timeline kerja. |
-| **`user` (User Divisi)** | Membuat pengajuan barang **hanya untuk divisinya sendiri** dan melihat rekap pengajuan divisinya secara *read-only*. |
+| **`admin` (Admin Utama)** | Melihat pengajuan semua divisi, CRUD semua pengajuan pada tab Semua Data (tab Rekap per divisi bersifat *read-only*), mengunggah & mengelola foto bukti transaksi/struk pengeluaran (multi-foto), mengelola akun & role/divisi pengguna, mengelola timeline kerja, dan ekspor Excel (.xlsx). |
+| **`admin_divisi` (Admin Divisi)** | Melihat pengajuan divisinya sendiri di rekap per divisi secara *read-only* (tanpa izin edit & hapus), mengekspor rekap divisinya ke Excel (.xlsx), membuat pengajuan lewat formulir, serta memantau timeline kerja. |
+| **`user` (User Divisi)** | Membuat pengajuan barang **hanya untuk divisinya sendiri** via formulir pengajuan. |
 
 ## 4. Menjalankan Project Secara Lokal
 

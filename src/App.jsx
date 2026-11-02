@@ -297,13 +297,21 @@ function AuthenticatedPortal() {
     notify(`${data.length} pengajuan untuk divisi ${effectiveDivisi} berhasil disimpan!`);
   };
 
-  // Tambah atau edit barang dari halaman rekap ke Supabase
+  // Tambah atau edit barang dari halaman rekap ke Supabase (Eksklusif Admin Utama di Semua Data)
   const handleSaveCrudItem = async (payload) => {
+    if (!isMainAdmin(profile)) {
+      notify(
+        'Akses ditolak: Rekap per divisi bersifat read-only. Hanya Admin Utama yang dapat mengubah data di Semua Data.',
+        'error'
+      );
+      return;
+    }
+
     if (payload.id) {
       const existingItem = items.find((item) => item.id === payload.id);
       if (!canEditItem(profile, existingItem, payload)) {
         notify(
-          'Akses ditolak: Anda hanya dapat mengubah data divisi Anda sendiri.',
+          'Akses ditolak: Anda tidak memiliki izin untuk mengubah data ini.',
           'error'
         );
         return;

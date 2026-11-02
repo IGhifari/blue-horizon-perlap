@@ -2,7 +2,7 @@ import { FileSpreadsheet, Plus } from 'lucide-react';
 import { DIVISIONS } from '../../data/initialData';
 import {
   isMainAdmin,
-  canManageDivisionItems,
+  canExportDivisionItems,
 } from '../../features/auth/permissions';
 import Button from '../ui/Button';
 
@@ -15,7 +15,10 @@ export default function DivisionTabs({
   onAddNewModal,
 }) {
   const showAllTabs = isMainAdmin(profile);
-  const canEditAndExport = canManageDivisionItems(profile);
+  // Tambah barang langsung di rekap hanya diizinkan untuk Admin Utama di tab Semua Data ('ALL').
+  // Tab Rekap per divisi bersifat read-only.
+  const canAddItems = isMainAdmin(profile) && activeDivisiTab === 'ALL';
+  const canExport = canExportDivisionItems(profile);
 
   const tabs = showAllTabs
     ? [
@@ -56,28 +59,32 @@ export default function DivisionTabs({
         })}
       </div>
 
-      {/* Tombol Aksi Khusus Admin Utama & Admin Divisi */}
-      {canEditAndExport && (
+      {/* Tombol Aksi: Tambah Barang (Hanya di Semua Data oleh Admin Utama) & Ekspor Excel */}
+      {(canAddItems || canExport) && (
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={onAddNewModal}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Barang</span>
-          </Button>
-          <Button
-            type="button"
-            variant="mint"
-            size="sm"
-            disabled={isExporting}
-            onClick={onExportExcel}
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>{isExporting ? 'Mengekspor...' : 'Ekspor Excel (.xlsx)'}</span>
-          </Button>
+          {canAddItems && (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={onAddNewModal}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Barang</span>
+            </Button>
+          )}
+          {canExport && (
+            <Button
+              type="button"
+              variant="mint"
+              size="sm"
+              disabled={isExporting}
+              onClick={onExportExcel}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>{isExporting ? 'Mengekspor...' : 'Ekspor Excel (.xlsx)'}</span>
+            </Button>
+          )}
         </div>
       )}
     </div>

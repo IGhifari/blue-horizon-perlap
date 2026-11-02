@@ -17,6 +17,7 @@ import {
 } from '../src/utils/exportUtils.js';
 import {
   ROLES,
+  isMainAdmin,
   canReadItem,
   canCreateItem,
   canEditItem,
@@ -24,6 +25,8 @@ import {
   canManageUsers,
   canManageTimeline,
   canManagePhotos,
+  canManageDivisionItems,
+  canExportDivisionItems,
   canUpdateProfileRoleOrDivisi,
   resolveEffectiveDivisionForCreate,
   filterItemsByProfileAccess,
@@ -113,7 +116,7 @@ test('Skenario 1: Admin utama dapat melihat, mengubah, menghapus data semua divi
   assert.equal(canManageTimeline(PROFILE_MAIN_ADMIN), true);
 });
 
-test('Skenario 2: Admin divisi hanya dapat melihat dan mengubah data divisinya sendiri', () => {
+test('Skenario 2: Admin divisi hanya dapat melihat data divisinya sendiri (read-only di rekap per divisi, tidak bisa edit & hapus)', () => {
   const visible = filterItemsByProfileAccess(INITIAL_ITEMS, PROFILE_ADMIN_ACARA);
   assert.equal(visible.length, 1);
   assert.equal(visible[0].divisi, 'Acara');
@@ -121,9 +124,16 @@ test('Skenario 2: Admin divisi hanya dapat melihat dan mengubah data divisinya s
   const itemAcara = INITIAL_ITEMS.find((i) => i.divisi === 'Acara');
   const itemDekdok = INITIAL_ITEMS.find((i) => i.divisi === 'Dekdok');
 
+  // Boleh membaca data divisinya sendiri
   assert.equal(canReadItem(PROFILE_ADMIN_ACARA, itemAcara), true);
-  assert.equal(canEditItem(PROFILE_ADMIN_ACARA, itemAcara, { divisi: 'Acara' }), true);
-  assert.equal(canDeleteItem(PROFILE_ADMIN_ACARA, itemAcara), true);
+
+  // Rekap per divisi bersifat read-only: Admin Divisi tidak boleh edit atau hapus
+  assert.equal(canEditItem(PROFILE_ADMIN_ACARA, itemAcara, { divisi: 'Acara' }), false);
+  assert.equal(canDeleteItem(PROFILE_ADMIN_ACARA, itemAcara), false);
+  assert.equal(canManageDivisionItems(PROFILE_ADMIN_ACARA), false);
+
+  // Boleh mengekspor data divisinya sendiri ke Excel
+  assert.equal(canExportDivisionItems(PROFILE_ADMIN_ACARA), true);
 
   // Tidak boleh memindahkan item divisinya ke divisi lain
   assert.equal(canEditItem(PROFILE_ADMIN_ACARA, itemAcara, { divisi: 'Dekdok' }), false);
@@ -212,7 +222,7 @@ test('Format nama file ekspor memuat tanggal Portal-Logistik-YYYY-MM-DD.xlsx', (
   assert.equal(fileName, 'Portal-Logistik-2026-10-27.xlsx');
 });
 
-test('Ekspor Excel role admin mencakup 7 sheet sesuai urutan spesifikasi dan memuat seluruh data', async () => {
+test('Ekspor Excel role admin mencakup 7 sheet sesuai urutan spesifikasi dan memuat seluruh data tanpa header banner', async () => {
   const wb = await buildPortalWorkbook({
     profile: PROFILE_MAIN_ADMIN,
     items: INITIAL_ITEMS,
@@ -230,43 +240,47 @@ test('Ekspor Excel role admin mencakup 7 sheet sesuai urutan spesifikasi dan mem
     'Rekap - Keamanan',
   ]);
 
-  // Periksa header sheet Semua Data
+  // Periksa header sheet Semua Data (langsung di baris 1 tanpa banner judul/petunjuk)
   const wsSemua = wb.getWorksheet('Semua Data');
   assert.ok(wsSemua);
   const headerValues = [
-    wsSemua.getCell('A4').value,
-    wsSemua.getCell('B4').value,
-    wsSemua.getCell('C4').value,
-    wsSemua.getCell('D4').value,
-    wsSemua.getCell('E4').value,
-    wsSemua.getCell('F4').value,
-    wsSemua.getCell('G4').value,
-    wsSemua.getCell('H4').value,
-    wsSemua.getCell('I4').value,
+    wsSemua.getCell('A1').value,
+    wsSemua.getCell('B1').value,
+    wsSemua.getCell('C1').value,
+    wsSemua.getCell('D1').value,
+    wsSemua.getCell('E1').value,
+    wsSemua.getCell('F1').value,
+    wsSemua.getCell('G1').value,
+    wsSemua.getCell('H1').value,
+    wsSemua.getCell('I1').value,
   ];
   assert.deepEqual(headerValues, EXPORT_HEADERS);
 
-  // Periksa autoFilter dan freeze pane
-  assert.equal(wsSemua.autoFilter, 'A4:I4');
+  // Periksa autoFilter dan freeze pane di baris 1
+  assert.equal(wsSemua.autoFilter, 'A1:I1');
   assert.equal(wsSemua.views[0]?.state, 'frozen');
-  assert.equal(wsSemua.views[0]?.ySplit, 4);
+  assert.equal(wsSemua.views[0]?.ySplit, 1);
 
-  // Periksa sheet Timeline Perlengkapan
+  // Data baris pertama dimulai langsung di baris 2
+  assert.equal(wsSemua.getCell('A2').value, 'Perlengkapan');
+
+  // Periksa sheet Timeline Perlengkapan (tanpa kalimat petunjuk Cara Penggunaan)
   const wsTimeline = wb.getWorksheet('Timeline Perlengkapan');
   assert.ok(wsTimeline);
-  assert.equal(wsTimeline.getCell('A7').value, 'No');
-  assert.equal(wsTimeline.getCell('B7').value, 'Divisi');
-  assert.equal(wsTimeline.autoFilter, 'A7:H7');
-  assert.equal(wsTimeline.views[0]?.ySplit, 7);
+  assert.equal(wsTimeline.getCell('A6').value, 'No');
+  assert.equal(wsTimeline.getCell('B6').value, 'Divisi');
+  assert.equal(wsTimeline.autoFilter, 'A6:H6');
+  assert.equal(wsTimeline.views[0]?.ySplit, 6);
+  assert.equal(wsTimeline.getCell('A2').value, null);
 
-  // Periksa bahwa data di sheet Rekap - Acara hanya divisi Acara
+  // Periksa bahwa data di sheet Rekap - Acara hanya divisi Acara (dimulai di baris 2)
   const wsAcara = wb.getWorksheet('Rekap - Acara');
   assert.ok(wsAcara);
-  const divisiVal = wsAcara.getCell('A5').value;
+  const divisiVal = wsAcara.getCell('A2').value;
   assert.equal(divisiVal, 'Acara');
 });
 
-test('Ekspor Excel role admin_divisi hanya memuat sheet divisinya dan tidak membocorkan divisi lain', async () => {
+test('Ekspor Excel role admin_divisi hanya memuat sheet divisinya saja tanpa sheet timeline perlengkapan dan tanpa sheet semua data', async () => {
   const result = await exportPortalToExcel({
     profile: PROFILE_ADMIN_ACARA,
     fallbackItems: INITIAL_ITEMS,
@@ -276,12 +290,14 @@ test('Ekspor Excel role admin_divisi hanya memuat sheet divisinya dan tidak memb
   const wb = result.wb;
   const sheetNames = wb.worksheets.map((s) => s.name);
 
-  // Hanya sheet Timeline, Semua Data (berisi data Acara saja), dan Rekap - Acara
+  // Hanya sheet Rekap - Acara saja (sheet Timeline Perlengkapan dan Semua Data tidak dibuat)
   assert.deepEqual(sheetNames, [
-    'Timeline Perlengkapan',
-    'Semua Data',
     'Rekap - Acara',
   ]);
+
+  // Pastikan sheet Semua Data dan Timeline Perlengkapan tidak ada
+  assert.equal(sheetNames.includes('Timeline Perlengkapan'), false);
+  assert.equal(sheetNames.includes('Semua Data'), false);
 
   // Pastikan sheet divisi lain tidak dibuat
   assert.equal(sheetNames.includes('Rekap - Perlengkapan'), false);
@@ -289,10 +305,14 @@ test('Ekspor Excel role admin_divisi hanya memuat sheet divisinya dan tidak memb
   assert.equal(sheetNames.includes('Rekap - Dekdok'), false);
   assert.equal(sheetNames.includes('Rekap - Keamanan'), false);
 
-  // Pastikan pada sheet Semua Data hanya berisi 1 item (milik Acara)
-  const wsSemua = wb.getWorksheet('Semua Data');
-  assert.equal(wsSemua.getCell('A5').value, 'Acara');
-  assert.equal(wsSemua.getCell('A6').value, 'TOTAL KESELURUHAN'); // baris setelah data adalah summary
+  // Periksa bahwa sheet Rekap - Acara langsung dimulai dengan header di baris 1 dan data di baris 2
+  const wsAcara = wb.getWorksheet('Rekap - Acara');
+  assert.equal(wsAcara.getCell('A1').value, 'Divisi');
+  assert.equal(wsAcara.getCell('B1').value, 'Nama Barang');
+  assert.equal(wsAcara.autoFilter, 'A1:I1');
+  assert.equal(wsAcara.views[0]?.ySplit, 1);
+  assert.equal(wsAcara.getCell('A2').value, 'Acara');
+  assert.equal(wsAcara.getCell('A3').value, 'TOTAL REKAP ACARA'); // baris setelah data adalah summary
 });
 
 test('Ekspor Excel melempar error jika data Supabase gagal diambil dan tidak mengunduh data parsial', async () => {
@@ -377,20 +397,20 @@ test('Hak akses foto bukti transaksi hanya diizinkan untuk Admin Utama (Divisi P
     fotoBukti: [{ id: 'p-1', name: 'struk.jpg', url: 'https://example.com/struk.jpg' }],
   };
 
-  // Admin Divisi boleh mengedit detail barang divisinya selama tidak mengubah fotoBukti
+  // Admin Utama diizinkan mengedit detail barang di sheet Semua Data
   assert.equal(
-    canEditItem(PROFILE_ADMIN_ACARA, itemAcara, {
+    canEditItem(PROFILE_MAIN_ADMIN, itemAcara, {
       divisi: 'Acara',
       fotoBukti: itemAcara.fotoBukti,
     }),
     true
   );
 
-  // Admin Divisi ditolak jika mencoba mengubah atau menghapus fotoBukti
+  // Admin Divisi tidak boleh mengedit barang (rekap per divisi bersifat read-only)
   assert.equal(
     canEditItem(PROFILE_ADMIN_ACARA, itemAcara, {
       divisi: 'Acara',
-      fotoBukti: [],
+      fotoBukti: itemAcara.fotoBukti,
     }),
     false
   );
@@ -488,5 +508,28 @@ test('Upload dan hapus foto bukti transaksi mendukung Supabase Storage & menolak
     supabaseClient: mockSupabaseStorage,
   });
   assert.deepEqual(removedPaths, [uploaded.storagePath]);
+});
+
+test('Tab Rekap per divisi bersifat read-only (Edit & Hapus eksklusif untuk Admin Utama di tab Semua Data)', () => {
+  const isAllTab = (tab) => tab === 'ALL';
+  const canEditOnTab = (profile, tab) => isMainAdmin(profile) && isAllTab(tab);
+
+  // Admin Utama di tab Semua Data ('ALL'): Boleh Edit & Hapus
+  assert.equal(canEditOnTab(PROFILE_MAIN_ADMIN, 'ALL'), true);
+
+  // Admin Utama di tab divisi ('Rekap - Acara', 'Rekap - Perlengkapan', dll.): Tidak boleh Edit & Hapus
+  assert.equal(canEditOnTab(PROFILE_MAIN_ADMIN, 'Acara'), false);
+  assert.equal(canEditOnTab(PROFILE_MAIN_ADMIN, 'Dekdok'), false);
+  assert.equal(canEditOnTab(PROFILE_MAIN_ADMIN, 'Perlengkapan'), false);
+  assert.equal(canEditOnTab(PROFILE_MAIN_ADMIN, 'Humreg'), false);
+  assert.equal(canEditOnTab(PROFILE_MAIN_ADMIN, 'Keamanan'), false);
+
+  // Admin Divisi di tab manapun: Tidak boleh Edit & Hapus
+  assert.equal(canEditOnTab(PROFILE_ADMIN_ACARA, 'ALL'), false);
+  assert.equal(canEditOnTab(PROFILE_ADMIN_ACARA, 'Acara'), false);
+
+  // User Divisi di tab manapun: Tidak boleh Edit & Hapus
+  assert.equal(canEditOnTab(PROFILE_USER_ACARA, 'ALL'), false);
+  assert.equal(canEditOnTab(PROFILE_USER_ACARA, 'Acara'), false);
 });
 
