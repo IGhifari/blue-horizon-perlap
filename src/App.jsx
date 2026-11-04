@@ -299,7 +299,7 @@ function AuthenticatedPortal() {
 
   // Tambah atau edit barang dari halaman rekap ke Supabase (Eksklusif Admin Utama di Semua Data)
   const handleSaveCrudItem = async (payload) => {
-    if (!isMainAdmin(profile)) {
+    if (!isMainAdmin) {
       notify(
         'Akses ditolak: Rekap per divisi bersifat read-only. Hanya Admin Utama yang dapat mengubah data di Semua Data.',
         'error'
