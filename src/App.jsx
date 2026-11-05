@@ -47,16 +47,32 @@ function isMissingFotoBuktiColumnError(error) {
   return msg.includes('foto_bukti');
 }
 
-const toDbItem = (item, { includeFotoBukti = true } = {}) => {
+function isMissingPriceColumnsError(error) {
+  if (!error) return false;
+  const msg = String(error.message || error.details || '').toLowerCase();
+  return msg.includes('harga_satuan') || msg.includes('total_harga');
+}
+
+const toDbItem = (
+  item,
+  { includeFotoBukti = true, includePrice = true } = {}
+) => {
   const rawNote = String(item.catatanOpsional ?? '')
     .replace(/\[PERLAP:SUDAH_ADA\]\s*/g, '')
     .trim();
   const cleanNote = rawNote || '-';
 
+  const jumlah = Math.max(1, Number(item.jumlahBarang) || 1);
+  const hargaSatuan = Math.max(0, Number(item.hargaSatuan) || 0);
+  const totalHarga =
+    item.totalHarga !== undefined && item.totalHarga !== null
+      ? Number(item.totalHarga)
+      : jumlah * hargaSatuan;
+
   const payload = {
     divisi: item.divisi,
     nama_barang: item.namaBarang,
-    jumlah_barang: Number(item.jumlahBarang) || 1,
+    jumlah_barang: jumlah,
     kategori: item.kategori,
     jika_membeli: item.jikaMembeli || null,
     jika_menyewa: item.jikaMenyewa || null,
@@ -64,6 +80,11 @@ const toDbItem = (item, { includeFotoBukti = true } = {}) => {
     catatan_opsional: cleanNote,
     tanggal_permintaan: item.tanggalPermintaan,
   };
+
+  if (includePrice) {
+    payload.harga_satuan = hargaSatuan;
+    payload.total_harga = totalHarga;
+  }
 
   if (includeFotoBukti && item.fotoBukti !== undefined) {
     payload.foto_bukti = normalizePhotoList(item.fotoBukti);
@@ -82,11 +103,22 @@ const fromDbItem = (item) => {
   const fallbackPhotos =
     dbPhotos.length > 0 ? dbPhotos : getFallbackPhotosForItem(item.id);
 
+  const jumlah = Math.max(1, Number(item.jumlah_barang) || 1);
+  const hargaSatuan = Math.max(0, Number(item.harga_satuan) || 0);
+  const totalHarga =
+    item.total_harga !== undefined && item.total_harga !== null
+      ? Number(item.total_harga)
+      : (item.totalHarga !== undefined && item.totalHarga !== null
+          ? Number(item.totalHarga)
+          : jumlah * hargaSatuan);
+
   return {
     id: item.id,
     divisi: item.divisi,
     namaBarang: item.nama_barang,
-    jumlahBarang: item.jumlah_barang,
+    jumlahBarang: jumlah,
+    hargaSatuan,
+    totalHarga,
     kategori: item.kategori,
     jikaMembeli: item.jika_membeli || '-',
     jikaMenyewa: item.jika_menyewa || '-',
@@ -259,27 +291,45 @@ function AuthenticatedPortal() {
 
     const newEntries = rows
       .filter((r) => r.namaBarang.trim())
-      .map((r) => ({
-        divisi: effectiveDivisi,
-        namaBarang: r.namaBarang.trim(),
-        jumlahBarang: Math.max(1, Number(r.jumlahBarang) || 1),
-        kategori: r.kategori,
-        jikaMembeli: r.jikaMembeli.trim() || '-',
-        jikaMenyewa: r.jikaMenyewa.trim() || '-',
-        jikaMeminjam: r.jikaMeminjam.trim() || '-',
-        catatanOpsional: r.catatanOpsional.trim() || '-',
-        tanggalPermintaan,
-      }));
+      .map((r) => {
+        const jumlah = Math.max(1, Number(r.jumlahBarang) || 1);
+        const harga = Math.max(0, Number(r.hargaSatuan) || 0);
+        return {
+          divisi: effectiveDivisi,
+          namaBarang: r.namaBarang.trim(),
+          jumlahBarang: jumlah,
+          hargaSatuan: harga,
+          totalHarga:
+            r.totalHarga !== undefined && r.totalHarga !== null
+              ? Number(r.totalHarga)
+              : jumlah * harga,
+          kategori: r.kategori,
+          jikaMembeli: r.jikaMembeli.trim() || '-',
+          jikaMenyewa: r.jikaMenyewa.trim() || '-',
+          jikaMeminjam: r.jikaMeminjam.trim() || '-',
+          catatanOpsional: r.catatanOpsional.trim() || '-',
+          tanggalPermintaan,
+        };
+      });
 
     if (!newEntries.length) {
       notify('Isi minimal satu nama barang.', 'error');
       return;
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('requests')
-      .insert(newEntries.map(toDbItem))
+      .insert(newEntries.map((e) => toDbItem(e, { includePrice: true })))
       .select('*');
+
+    if (error && isMissingPriceColumnsError(error)) {
+      const fallbackResult = await supabase
+        .from('requests')
+        .insert(newEntries.map((e) => toDbItem(e, { includePrice: false })))
+        .select('*');
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+    }
 
     if (error) {
       console.error(error);
@@ -329,7 +379,10 @@ function AuthenticatedPortal() {
     }
 
     const canUpload = canManagePhotos(profile);
-    const dbPayload = toDbItem(payload, { includeFotoBukti: canUpload });
+    const dbPayload = toDbItem(payload, {
+      includeFotoBukti: canUpload,
+      includePrice: true,
+    });
     let result;
 
     if (payload.id) {
@@ -340,10 +393,20 @@ function AuthenticatedPortal() {
         .select('*')
         .single();
 
-      if (result.error && isMissingFotoBuktiColumnError(result.error)) {
+      if (
+        result.error &&
+        (isMissingFotoBuktiColumnError(result.error) ||
+          isMissingPriceColumnsError(result.error))
+      ) {
         result = await supabase
           .from('requests')
-          .update(toDbItem(payload, { includeFotoBukti: false }))
+          .update(
+            toDbItem(payload, {
+              includeFotoBukti:
+                !isMissingFotoBuktiColumnError(result.error) && canUpload,
+              includePrice: !isMissingPriceColumnsError(result.error),
+            })
+          )
           .eq('id', payload.id)
           .select('*')
           .single();
@@ -355,10 +418,20 @@ function AuthenticatedPortal() {
         .select('*')
         .single();
 
-      if (result.error && isMissingFotoBuktiColumnError(result.error)) {
+      if (
+        result.error &&
+        (isMissingFotoBuktiColumnError(result.error) ||
+          isMissingPriceColumnsError(result.error))
+      ) {
         result = await supabase
           .from('requests')
-          .insert(toDbItem(payload, { includeFotoBukti: false }))
+          .insert(
+            toDbItem(payload, {
+              includeFotoBukti:
+                !isMissingFotoBuktiColumnError(result.error) && canUpload,
+              includePrice: !isMissingPriceColumnsError(result.error),
+            })
+          )
           .select('*')
           .single();
       }

@@ -30,7 +30,7 @@ export const KETENTUAN_ITEMS = [
   },
   {
     number: '3. Jika Membeli:',
-    desc: 'Cantumkan perkiraan rentang harga barang.',
+    desc: 'Cantumkan nama toko, platform, atau tempat pembelian.',
   },
   {
     number: '4. Jika Menyewa:',
@@ -52,6 +52,8 @@ export const INITIAL_ITEMS = [
     divisi: 'Perlengkapan',
     namaBarang: 'Kabel Roll 25 Meter',
     jumlahBarang: 6,
+    hargaSatuan: 0,
+    totalHarga: 0,
     kategori: 'Pinjam',
     jikaMembeli: '-',
     jikaMenyewa: '-',
@@ -64,8 +66,10 @@ export const INITIAL_ITEMS = [
     divisi: 'Humreg',
     namaBarang: 'Lanyard & ID Card Panitia',
     jumlahBarang: 50,
+    hargaSatuan: 6000,
+    totalHarga: 300000,
     kategori: 'Beli',
-    jikaMembeli: 'Rp 5.000 - Rp 8.000 / pcs',
+    jikaMembeli: 'Percetakan & Toko ATK Jaya',
     jikaMenyewa: '-',
     jikaMeminjam: '-',
     catatanOpsional: 'Desain sudah siap cetak',
@@ -76,6 +80,8 @@ export const INITIAL_ITEMS = [
     divisi: 'Dekdok',
     namaBarang: 'Lighting & Tripod Kamera',
     jumlahBarang: 2,
+    hargaSatuan: 75000,
+    totalHarga: 150000,
     kategori: 'Sewa',
     jikaMembeli: '-',
     jikaMenyewa: 'Sewa Kamera Bogor (@sewakamerabogor)',
@@ -88,6 +94,8 @@ export const INITIAL_ITEMS = [
     divisi: 'Acara',
     namaBarang: 'Microphone Wireless Dual UHF',
     jumlahBarang: 4,
+    hargaSatuan: 100000,
+    totalHarga: 400000,
     kategori: 'Sewa',
     jikaMembeli: '-',
     jikaMenyewa: 'Vendor Sound System Utama',
@@ -100,6 +108,8 @@ export const INITIAL_ITEMS = [
     divisi: 'Keamanan',
     namaBarang: 'Handy Talky (HT) & Charger',
     jumlahBarang: 6,
+    hargaSatuan: 50000,
+    totalHarga: 300000,
     kategori: 'Sewa',
     jikaMembeli: '-',
     jikaMenyewa: 'Rental HT Bogor',
@@ -160,11 +170,23 @@ export const INITIAL_TIMELINE = [
   },
 ];
 
+export function formatRupiah(amount) {
+  const num = Number(amount) || 0;
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
 export function createEmptyDraftRow() {
   return {
     draftId: 'draft-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
     namaBarang: '',
     jumlahBarang: 1,
+    hargaSatuan: 0,
+    totalHarga: 0,
     kategori: 'Pinjam',
     tersediaDiPerlap: 'Belum Ada',
     jikaMembeli: '',

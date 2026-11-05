@@ -32,6 +32,7 @@ Variabel berikut otomatis disediakan oleh runtime Supabase Edge Functions di ser
    - `supabase/migrations/20261026000001_rbac_rls_policies.sql`
    - `supabase/migrations/20261031000002_photo_receipts_support.sql` *(untuk dukungan kolom `foto_bukti` dan Storage Bucket `bukti-transaksi`)*
    - `supabase/migrations/20261102000003_readonly_rekap_per_divisi.sql` *(proteksi read-only pada rekap per divisi)*
+   - `supabase/migrations/20261105000004_add_price_columns.sql` *(dukungan kolom `harga_satuan` dan `total_harga`)*
 2. Buat pengguna pertama di **Supabase Dashboard → Authentication → Users → Add User**:
    - Email: `admin_perlap@perlap.internal` (atau email pilihan Anda)
    - Password: `<password-kuat>`

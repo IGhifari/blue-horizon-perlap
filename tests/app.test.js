@@ -7,6 +7,7 @@ import {
   CATEGORIES,
   createEmptyDraftRow,
   getTodayDateString,
+  formatRupiah,
 } from '../src/data/initialData.js';
 import {
   filterItems,
@@ -14,6 +15,7 @@ import {
   exportPortalToExcel,
   getExportFileName,
   EXPORT_HEADERS,
+  normalizeItem,
 } from '../src/utils/exportUtils.js';
 import {
   ROLES,
@@ -91,7 +93,26 @@ test('createEmptyDraftRow menghasilkan baris draft dengan default yang valid', (
   assert.ok(row.draftId.startsWith('draft-'));
   assert.equal(row.namaBarang, '');
   assert.equal(row.jumlahBarang, 1);
+  assert.equal(row.hargaSatuan, 0);
+  assert.equal(row.totalHarga, 0);
   assert.equal(row.kategori, 'Pinjam');
+});
+
+test('formatRupiah memformat angka ke dalam format mata uang IDR dengan benar', () => {
+  assert.match(formatRupiah(15000), /Rp\s*15\.000/);
+  assert.match(formatRupiah(0), /Rp\s*0/);
+  assert.match(formatRupiah('250000'), /Rp\s*250\.000/);
+});
+
+test('normalizeItem menghitung dan memetakan hargaSatuan serta totalHarga dengan benar', () => {
+  const item = normalizeItem({
+    divisi: 'Acara',
+    namaBarang: 'Kabel Audio',
+    jumlahBarang: 5,
+    hargaSatuan: 20000,
+  });
+  assert.equal(item.hargaSatuan, 20000);
+  assert.equal(item.totalHarga, 100000);
 });
 
 test('getTodayDateString menghasilkan tanggal hari ini dengan format YYYY-MM-DD', () => {
@@ -253,16 +274,21 @@ test('Ekspor Excel role admin mencakup 7 sheet sesuai urutan spesifikasi dan mem
     wsSemua.getCell('G1').value,
     wsSemua.getCell('H1').value,
     wsSemua.getCell('I1').value,
+    wsSemua.getCell('J1').value,
+    wsSemua.getCell('K1').value,
   ];
   assert.deepEqual(headerValues, EXPORT_HEADERS);
 
   // Periksa autoFilter dan freeze pane di baris 1
-  assert.equal(wsSemua.autoFilter, 'A1:I1');
+  assert.equal(wsSemua.autoFilter, 'A1:K1');
   assert.equal(wsSemua.views[0]?.state, 'frozen');
   assert.equal(wsSemua.views[0]?.ySplit, 1);
 
   // Data baris pertama dimulai langsung di baris 2
   assert.equal(wsSemua.getCell('A2').value, 'Perlengkapan');
+  assert.equal(wsSemua.getCell('C2').value, 6);
+  assert.equal(wsSemua.getCell('D2').value, 0);
+  assert.equal(wsSemua.getCell('E2').value, 0);
 
   // Periksa sheet Timeline Perlengkapan (tanpa kalimat petunjuk Cara Penggunaan)
   const wsTimeline = wb.getWorksheet('Timeline Perlengkapan');
@@ -309,9 +335,15 @@ test('Ekspor Excel role admin_divisi hanya memuat sheet divisinya saja tanpa she
   const wsAcara = wb.getWorksheet('Rekap - Acara');
   assert.equal(wsAcara.getCell('A1').value, 'Divisi');
   assert.equal(wsAcara.getCell('B1').value, 'Nama Barang');
-  assert.equal(wsAcara.autoFilter, 'A1:I1');
+  assert.equal(wsAcara.getCell('C1').value, 'Jumlah Barang');
+  assert.equal(wsAcara.getCell('D1').value, 'Harga Satuan (Rp)');
+  assert.equal(wsAcara.getCell('E1').value, 'Total (Rp)');
+  assert.equal(wsAcara.autoFilter, 'A1:K1');
   assert.equal(wsAcara.views[0]?.ySplit, 1);
   assert.equal(wsAcara.getCell('A2').value, 'Acara');
+  assert.equal(wsAcara.getCell('C2').value, 4);
+  assert.equal(wsAcara.getCell('D2').value, 100000);
+  assert.equal(wsAcara.getCell('E2').value, 400000);
   assert.equal(wsAcara.getCell('A3').value, 'TOTAL REKAP ACARA'); // baris setelah data adalah summary
 });
 

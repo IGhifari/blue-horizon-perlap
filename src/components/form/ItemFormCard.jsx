@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { CATEGORIES } from '../../data/initialData';
+import { CATEGORIES, formatRupiah } from '../../data/initialData';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Select from '../ui/Select';
@@ -41,9 +41,9 @@ export default function ItemFormCard({
         )}
       </div>
 
-      {/* Baris 1: Nama Barang, Jumlah, Kategori */}
+      {/* Baris 1: Nama Barang, Jumlah, Harga Satuan, Total */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-        <div className="sm:col-span-6">
+        <div className="sm:col-span-5">
           <Input
             id={`namaBarang-${draftId}`}
             label="Nama Barang / Alat"
@@ -58,7 +58,7 @@ export default function ItemFormCard({
         <div className="sm:col-span-2">
           <Input
             id={`jumlahBarang-${draftId}`}
-            label="Jumlah Barang"
+            label="Jumlah"
             type="number"
             min="1"
             required
@@ -68,43 +68,75 @@ export default function ItemFormCard({
           />
         </div>
 
-        <div className="sm:col-span-4">
+        <div className="sm:col-span-2">
+          <Input
+            id={`hargaSatuan-${draftId}`}
+            label="Harga Satuan (Rp)"
+            type="number"
+            min="0"
+            value={row.hargaSatuan === '' ? '' : (row.hargaSatuan ?? 0)}
+            onChange={(e) => onChangeField(draftId, 'hargaSatuan', e.target.value)}
+            placeholder="0"
+          />
+        </div>
+
+        <div className="sm:col-span-3">
+          <Input
+            id={`totalHarga-${draftId}`}
+            label="Total (Rp)"
+            value={formatRupiah(
+              row.totalHarga ??
+                (Number(row.jumlahBarang) || 0) * (Number(row.hargaSatuan) || 0)
+            )}
+            readOnly
+            disabled
+            className="bg-[#EDF2F7] cursor-not-allowed font-black text-[#0A1936]"
+          />
+        </div>
+      </div>
+
+      {/* Baris 2: Kategori, Informasi Pembelian, Penyewaan, Peminjaman */}
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+        <div className="sm:col-span-3">
           <Select
             id={`kategori-${draftId}`}
-            label="Kategori / Metode Pengadaan"
+            label="Kategori Pengadaan"
             required
             value={row.kategori}
             options={CATEGORIES}
             onChange={(e) => onChangeField(draftId, 'kategori', e.target.value)}
           />
         </div>
-      </div>
 
-      {/* Baris 2: Informasi Pembelian, Penyewaan, Peminjaman */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Input
-          id={`jikaMembeli-${draftId}`}
-          label="Jika Membeli (Perkiraan Rentang Harga)"
-          value={row.jikaMembeli}
-          onChange={(e) => onChangeField(draftId, 'jikaMembeli', e.target.value)}
-          placeholder="Contoh: Rp 10.000 - Rp 15.000"
-        />
+        <div className="sm:col-span-3">
+          <Input
+            id={`jikaMembeli-${draftId}`}
+            label="Jika Membeli (Tempat Beli)"
+            value={row.jikaMembeli}
+            onChange={(e) => onChangeField(draftId, 'jikaMembeli', e.target.value)}
+            placeholder="Contoh: Toko ATK / Tokopedia"
+          />
+        </div>
 
-        <Input
-          id={`jikaMenyewa-${draftId}`}
-          label="Jika Menyewa (Nama / Info Tempat Sewa)"
-          value={row.jikaMenyewa}
-          onChange={(e) => onChangeField(draftId, 'jikaMenyewa', e.target.value)}
-          placeholder="Contoh: Rental Sound / IG tempat sewa"
-        />
+        <div className="sm:col-span-3">
+          <Input
+            id={`jikaMenyewa-${draftId}`}
+            label="Jika Menyewa (Tempat Sewa)"
+            value={row.jikaMenyewa}
+            onChange={(e) => onChangeField(draftId, 'jikaMenyewa', e.target.value)}
+            placeholder="Contoh: Rental Sound Bogor"
+          />
+        </div>
 
-        <Input
-          id={`jikaMeminjam-${draftId}`}
-          label="Jika Meminjam (Nama Orang yang Meminjamkan)"
-          value={row.jikaMeminjam}
-          onChange={(e) => onChangeField(draftId, 'jikaMeminjam', e.target.value)}
-          placeholder="Contoh: Budi (BEM / Logistik)"
-        />
+        <div className="sm:col-span-3">
+          <Input
+            id={`jikaMeminjam-${draftId}`}
+            label="Jika Meminjam (Pihak Peminjam)"
+            value={row.jikaMeminjam}
+            onChange={(e) => onChangeField(draftId, 'jikaMeminjam', e.target.value)}
+            placeholder="Contoh: Budi (Logistik Kampus)"
+          />
+        </div>
       </div>
 
       {/* Baris 3: Catatan Opsional */}

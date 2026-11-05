@@ -1,4 +1,5 @@
 import { Trash2, Pencil, Camera, Eye } from 'lucide-react';
+import { formatRupiah } from '../../data/initialData';
 import { normalizePhotoList } from '../../utils/photoUtils';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
@@ -11,17 +12,23 @@ export default function ItemsTable({
   onDeleteItem,
   onOpenPhotos,
 }) {
-  const totalCols = isAdmin ? 11 : 10;
+  const totalCols = isAdmin ? 13 : 12;
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse min-w-[1060px]">
+      <table className="w-full text-left border-collapse min-w-[1240px]">
         <thead>
           <tr className="bg-[#132956] text-white text-[11px] uppercase tracking-wider border-b-2 border-[#0A1936]">
             <th className="py-3.5 px-3.5 font-extrabold">Divisi</th>
             <th className="py-3.5 px-3.5 font-extrabold">Nama Barang</th>
             <th className="py-3.5 px-3.5 font-extrabold text-right">
               Jumlah Barang
+            </th>
+            <th className="py-3.5 px-3.5 font-extrabold text-right">
+              Harga Satuan
+            </th>
+            <th className="py-3.5 px-3.5 font-extrabold text-right">
+              Total
             </th>
             <th className="py-3.5 px-3.5 font-extrabold text-center">
               Kategori
@@ -73,6 +80,16 @@ export default function ItemsTable({
                   </td>
                   <td className="py-3 px-3.5 text-right font-black text-[#0A1936]">
                     {item.jumlahBarang}
+                  </td>
+                  <td className="py-3 px-3.5 text-right font-semibold text-[#0A1936] whitespace-nowrap">
+                    {formatRupiah(item.hargaSatuan || 0)}
+                  </td>
+                  <td className="py-3 px-3.5 text-right font-black text-[#132956] whitespace-nowrap">
+                    {formatRupiah(
+                      item.totalHarga !== undefined && item.totalHarga !== null
+                        ? item.totalHarga
+                        : (Number(item.jumlahBarang) || 0) * (Number(item.hargaSatuan) || 0)
+                    )}
                   </td>
                   <td className="py-3 px-3.5 text-center whitespace-nowrap">
                     <Badge variant={item.kategori}>{item.kategori}</Badge>

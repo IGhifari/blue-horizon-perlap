@@ -5,6 +5,7 @@ import {
   DIVISIONS,
   CATEGORIES,
   getTodayDateString,
+  formatRupiah,
 } from '../../data/initialData';
 import {
   isMainAdmin,
@@ -39,6 +40,8 @@ export default function EditItemModal({
     divisi: profile?.divisi || 'Perlengkapan',
     namaBarang: '',
     jumlahBarang: 1,
+    hargaSatuan: 0,
+    totalHarga: 0,
     kategori: 'Pinjam',
     jikaMembeli: '',
     jikaMenyewa: '',
@@ -57,10 +60,19 @@ export default function EditItemModal({
         ? item.divisi || 'Perlengkapan'
         : profile?.divisi || item.divisi;
 
+      const parsedJumlah = item.jumlahBarang ?? 1;
+      const parsedHarga = Number(item.hargaSatuan) || 0;
+      const parsedTotal =
+        item.totalHarga !== undefined && item.totalHarga !== null
+          ? Number(item.totalHarga)
+          : (Number(parsedJumlah) || 0) * parsedHarga;
+
       setFormData({
         divisi: lockedDivisi,
         namaBarang: item.namaBarang || '',
-        jumlahBarang: item.jumlahBarang || 1,
+        jumlahBarang: parsedJumlah,
+        hargaSatuan: parsedHarga,
+        totalHarga: parsedTotal,
         kategori: item.kategori || 'Pinjam',
         jikaMembeli: item.jikaMembeli === '-' ? '' : item.jikaMembeli || '',
         jikaMenyewa: item.jikaMenyewa === '-' ? '' : item.jikaMenyewa || '',
@@ -76,15 +88,39 @@ export default function EditItemModal({
   if (!item) return null;
 
   const handleChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]:
-        field === 'jumlahBarang'
-          ? value === ''
-            ? ''
-            : parseInt(value, 10) || 1
-          : value,
-    }));
+    setFormData((prev) => {
+      let nextJumlah = prev.jumlahBarang;
+      let nextHarga = prev.hargaSatuan;
+
+      if (field === 'jumlahBarang') {
+        nextJumlah = value === '' ? '' : parseInt(value, 10);
+        if (Number.isNaN(nextJumlah)) nextJumlah = '';
+        const qty = Number(nextJumlah) || 0;
+        const harga = Number(nextHarga) || 0;
+        return {
+          ...prev,
+          jumlahBarang: nextJumlah,
+          totalHarga: qty * harga,
+        };
+      }
+
+      if (field === 'hargaSatuan') {
+        nextHarga = value === '' ? '' : parseFloat(value);
+        if (Number.isNaN(nextHarga)) nextHarga = '';
+        const qty = Number(nextJumlah) || 0;
+        const harga = Number(nextHarga) || 0;
+        return {
+          ...prev,
+          hargaSatuan: nextHarga,
+          totalHarga: qty * harga,
+        };
+      }
+
+      return {
+        ...prev,
+        [field]: value,
+      };
+    });
     if (error) setError('');
   };
 
@@ -165,11 +201,17 @@ export default function EditItemModal({
       ? formData.divisi
       : profile?.divisi || formData.divisi;
 
+    const qty = Math.max(1, Number(formData.jumlahBarang) || 1);
+    const harga = Math.max(0, Number(formData.hargaSatuan) || 0);
+    const total = qty * harga;
+
     onSave({
       ...(item.id ? { id: item.id } : {}),
       divisi: finalDivisi,
       namaBarang: formData.namaBarang.trim(),
-      jumlahBarang: Math.max(1, Number(formData.jumlahBarang) || 1),
+      jumlahBarang: qty,
+      hargaSatuan: harga,
+      totalHarga: total,
       kategori: formData.kategori,
       jikaMembeli: formData.jikaMembeli.trim() || '-',
       jikaMenyewa: formData.jikaMenyewa.trim() || '-',
@@ -242,28 +284,47 @@ export default function EditItemModal({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-            <div className="sm:col-span-8">
-              <Input
-                id="modal-namaBarang"
-                label="Nama Barang / Alat"
-                required
-                value={formData.namaBarang}
-                onChange={(e) => handleChange('namaBarang', e.target.value)}
-                placeholder="Nama barang..."
-              />
-            </div>
-            <div className="sm:col-span-4">
-              <Input
-                id="modal-jumlahBarang"
-                label="Jumlah Unit"
-                type="number"
-                min="1"
-                required
-                value={formData.jumlahBarang}
-                onChange={(e) => handleChange('jumlahBarang', e.target.value)}
-              />
-            </div>
+          <div>
+            <Input
+              id="modal-namaBarang"
+              label="Nama Barang / Alat"
+              required
+              value={formData.namaBarang}
+              onChange={(e) => handleChange('namaBarang', e.target.value)}
+              placeholder="Nama barang..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input
+              id="modal-jumlahBarang"
+              label="Jumlah Unit"
+              type="number"
+              min="1"
+              required
+              value={formData.jumlahBarang}
+              onChange={(e) => handleChange('jumlahBarang', e.target.value)}
+            />
+            <Input
+              id="modal-hargaSatuan"
+              label="Harga Satuan (Rp)"
+              type="number"
+              min="0"
+              value={formData.hargaSatuan === '' ? '' : (formData.hargaSatuan ?? 0)}
+              onChange={(e) => handleChange('hargaSatuan', e.target.value)}
+              placeholder="0"
+            />
+            <Input
+              id="modal-totalHarga"
+              label="Total (Rp)"
+              value={formatRupiah(
+                formData.totalHarga ??
+                  (Number(formData.jumlahBarang) || 0) * (Number(formData.hargaSatuan) || 0)
+              )}
+              readOnly
+              disabled
+              className="bg-[#EDF2F7] cursor-not-allowed font-black text-[#0A1936]"
+            />
           </div>
 
           <div className="p-3.5 rounded-xl bg-[#DBEAFE] border-2 border-[#0A1936]">
@@ -280,10 +341,10 @@ export default function EditItemModal({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Input
               id="modal-jikaMembeli"
-              label="Jika Membeli"
+              label="Jika Membeli (Tempat Beli)"
               value={formData.jikaMembeli}
               onChange={(e) => handleChange('jikaMembeli', e.target.value)}
-              placeholder="Rentang harga..."
+              placeholder="Contoh: Toko ATK / Tokopedia..."
             />
             <Input
               id="modal-jikaMenyewa"

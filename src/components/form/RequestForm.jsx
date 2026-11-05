@@ -43,7 +43,23 @@ export default function RequestForm({ profile, onSubmitItems, onNotify }) {
         if (row.draftId !== draftId) return row;
         if (field === 'jumlahBarang') {
           const parsed = value === '' ? '' : parseInt(value, 10);
-          return { ...row, jumlahBarang: Number.isNaN(parsed) ? '' : parsed };
+          const nextQty = Number.isNaN(parsed) ? '' : parsed;
+          const harga = Number(row.hargaSatuan) || 0;
+          return {
+            ...row,
+            jumlahBarang: nextQty,
+            totalHarga: (typeof nextQty === 'number' ? nextQty : 0) * harga,
+          };
+        }
+        if (field === 'hargaSatuan') {
+          const parsed = value === '' ? '' : parseFloat(value);
+          const nextHarga = Number.isNaN(parsed) ? '' : parsed;
+          const qty = Number(row.jumlahBarang) || 0;
+          return {
+            ...row,
+            hargaSatuan: nextHarga,
+            totalHarga: qty * (typeof nextHarga === 'number' ? nextHarga : 0),
+          };
         }
         return { ...row, [field]: value };
       })
@@ -121,10 +137,21 @@ export default function RequestForm({ profile, onSubmitItems, onNotify }) {
       ? divisi
       : profile?.divisi || divisi;
 
+    const cleanedRows = validRows.map((r) => {
+      const qty = Math.max(1, Number(r.jumlahBarang) || 1);
+      const harga = Math.max(0, Number(r.hargaSatuan) || 0);
+      return {
+        ...r,
+        jumlahBarang: qty,
+        hargaSatuan: harga,
+        totalHarga: qty * harga,
+      };
+    });
+
     onSubmitItems({
       divisi: effectiveDivisi,
       tanggalPermintaan: tanggalPermintaan || getTodayDateString(),
-      rows: validRows,
+      rows: cleanedRows,
     });
 
     setDraftRows([createEmptyDraftRow()]);

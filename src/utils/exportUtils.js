@@ -21,6 +21,8 @@ export const EXPORT_HEADERS = [
   'Divisi',
   'Nama Barang',
   'Jumlah Barang',
+  'Harga Satuan (Rp)',
+  'Total (Rp)',
   'Kategori',
   'Jika Membeli',
   'Jika Menyewa',
@@ -71,11 +73,22 @@ export function normalizeItem(item) {
   const rawDivisi = item.divisi || '-';
   const canonicalDiv = matchCanonicalDivision(rawDivisi);
 
+  const jumlah = Math.max(1, Number(item.jumlahBarang ?? item.jumlah_barang) || 1);
+  const hargaSatuan = Math.max(0, Number(item.hargaSatuan ?? item.harga_satuan) || 0);
+  const totalHarga =
+    item.totalHarga !== undefined && item.totalHarga !== null
+      ? Number(item.totalHarga)
+      : (item.total_harga !== undefined && item.total_harga !== null
+          ? Number(item.total_harga)
+          : jumlah * hargaSatuan);
+
   return {
     id: item.id,
     divisi: canonicalDiv,
     namaBarang: item.namaBarang ?? item.nama_barang ?? '-',
-    jumlahBarang: Math.max(1, Number(item.jumlahBarang ?? item.jumlah_barang) || 1),
+    jumlahBarang: jumlah,
+    hargaSatuan,
+    totalHarga,
     kategori: item.kategori || '-',
     jikaMembeli: (item.jikaMembeli ?? item.jika_membeli) || '-',
     jikaMenyewa: (item.jikaMenyewa ?? item.jika_menyewa) || '-',
@@ -114,6 +127,8 @@ function formatItemsSheet(ws, { rows = [], isAllData = false, divisiName = '' })
     { key: 'divisi', width: 18 },
     { key: 'namaBarang', width: 34 },
     { key: 'jumlahBarang', width: 16 },
+    { key: 'hargaSatuan', width: 20 },
+    { key: 'totalHarga', width: 22 },
     { key: 'kategori', width: 20 },
     { key: 'jikaMembeli', width: 26 },
     { key: 'jikaMenyewa', width: 30 },
@@ -145,7 +160,7 @@ function formatItemsSheet(ws, { rows = [], isAllData = false, divisiName = '' })
   });
 
   // Aktifkan Filter pada Baris Header Tabel (Baris 1)
-  ws.autoFilter = 'A1:I1';
+  ws.autoFilter = 'A1:K1';
 
   // Baris 2+: Data Pengajuan
   let currentRowIndex = 2;
@@ -156,6 +171,8 @@ function formatItemsSheet(ws, { rows = [], isAllData = false, divisiName = '' })
       item.divisi || '-',
       item.namaBarang || '-',
       Number(item.jumlahBarang) || 1,
+      Number(item.hargaSatuan) || 0,
+      Number(item.totalHarga) || 0,
       item.kategori || '-',
       item.jikaMembeli || '-',
       item.jikaMenyewa || '-',
@@ -173,7 +190,11 @@ function formatItemsSheet(ws, { rows = [], isAllData = false, divisiName = '' })
         // Jumlah Barang: angka rata kanan dengan format ribuan
         cell.numFmt = '#,##0';
         cell.alignment = { vertical: 'middle', horizontal: 'right' };
-      } else if (idx === 0 || idx === 3 || idx === 8) {
+      } else if (idx === 3 || idx === 4) {
+        // Harga Satuan & Total: Rupiah format rata kanan
+        cell.numFmt = '"Rp"#,##0';
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+      } else if (idx === 0 || idx === 5 || idx === 10) {
         // Divisi, Kategori, Tanggal: rata tengah
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
       } else {
@@ -188,11 +209,14 @@ function formatItemsSheet(ws, { rows = [], isAllData = false, divisiName = '' })
   summaryRow.height = 25;
   const lastDataRow = currentRowIndex - 1;
   const totalQtyCalc = rows.reduce((s, r) => s + (Number(r.jumlahBarang) || 0), 0);
+  const totalCostCalc = rows.reduce((s, r) => s + (Number(r.totalHarga) || 0), 0);
 
   const summaryValues = [
     isAllData ? 'TOTAL KESELURUHAN' : `TOTAL REKAP ${divisiName ? divisiName.toUpperCase() : ''}`.trim(),
     `${rows.length} Permintaan`,
     rows.length > 0 ? { formula: `SUM(C2:C${lastDataRow})`, result: totalQtyCalc } : 0,
+    '',
+    rows.length > 0 ? { formula: `SUM(E2:E${lastDataRow})`, result: totalCostCalc } : 0,
     '',
     '',
     '',
@@ -213,6 +237,9 @@ function formatItemsSheet(ws, { rows = [], isAllData = false, divisiName = '' })
       cell.alignment = { vertical: 'middle', horizontal: 'left' };
     } else if (idx === 2) {
       cell.numFmt = '#,##0';
+      cell.alignment = { vertical: 'middle', horizontal: 'right' };
+    } else if (idx === 4) {
+      cell.numFmt = '"Rp"#,##0';
       cell.alignment = { vertical: 'middle', horizontal: 'right' };
     } else {
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
